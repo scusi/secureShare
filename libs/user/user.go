@@ -215,3 +215,12 @@ func (udb *UserDB) APIToken(username string) (APIToken string) {
 	}
 	return ""
 }
+
+func (udb *UserDB) PubID(username string) (pubid string) {
+	for _, u := range udb.Users {
+		if u.Name == username {
+			return u.PubID
+		}
+	}
+	return ""
+}
