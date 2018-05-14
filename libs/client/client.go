@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/textproto"
+	"net/url"
 	"strings"
 )
 
@@ -104,6 +105,26 @@ func New(options ...OptionFunc) (c *Client, err error) {
 	}
 
 	return c, nil
+}
+
+func (c *Client) Register(username, password, pubID string) (token string, err error) {
+	v := url.Values{}
+	v.Add("username", username)
+	v.Add("password", password)
+	v.Add("pubID", pubID)
+	req, err := http.NewRequest("POST", c.URL+"register", strings.NewReader(v.Encode()))
+	if err != nil {
+		return
+	}
+	resp, err := c.HttpClient.Do(req)
+	if err != nil {
+		return
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+	return fmt.Sprintf("%s", body), nil
 }
 
 // UploadFile will upload a given file for a given user on secureShare

@@ -85,8 +85,29 @@ func main() {
 	router.HandleFunc("/{UserID}/{FileID}", Download)
 	router.HandleFunc("/upload/", Upload)
 	router.HandleFunc("/list/", List)
+	router.HandleFunc("/register/", Register)
 	log.Printf("listenAddr: %s\n", cfg.ListenAddr)
 	log.Fatal(http.ListenAndServe(cfg.ListenAddr, router))
+}
+
+func Register(w http.ResponseWriter, r *http.Request) {
+	username := r.PostFormValue("username")
+	password := r.PostFormValue("password")
+	pubID := r.PostFormValue("PubID")
+	// TODO: check if pubID is a syntactical valid minilock ID
+
+	if userDB.Lookup(username) {
+		http.Error(w, "User already existing", 500)
+		return
+	}
+	err := userDB.Add(username, password, pubID)
+	if err != nil {
+		http.Error(w, "adding user failed", 500)
+		return
+	}
+	token := userDB.APIToken(username)
+	fmt.Fprintf("%s", token)
+	return
 }
 
 // GenBlake2b32 - genertes a blake2b 32 byte checksum over given data.
@@ -98,6 +119,7 @@ func GenBlake2b32(data []byte) (c string) {
 	return fmt.Sprintf("%x", bsum)
 }
 
+// generate a short file ID based on blake2s
 func GenBlake2s(data []byte) (c string, err error) {
 	hash, err := blake2s.New(&blake2s.Config{Size: 4, Person: []byte("scusi.v1")})
 	if err != nil {
@@ -120,6 +142,7 @@ func List(w http.ResponseWriter, r *http.Request) {
 	}
 	keyChan := store.KeysPrefix(userDB.PubID(username), nil)
 	for k := range keyChan {
+		//TODO: get the file time and display it
 		k = strings.TrimPrefix(k, userDB.PubID(username)+"/")
 		fmt.Fprintf(w, "'%s'", k)
 	}
