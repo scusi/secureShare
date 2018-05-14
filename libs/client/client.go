@@ -16,10 +16,14 @@ import (
 	"strings"
 )
 
+const defaultURL = "http://127.0.0.1:9999/"
+
 type Client struct {
+	ID         string
 	Username   string
 	Password   string
 	APIToken   string
+	URL        string
 	HttpClient *http.Client
 }
 
@@ -31,6 +35,21 @@ func escapeQuotes(s string) string {
 }
 
 type OptionFunc func(*Client) error
+
+func SetURL(url string) OptionFunc {
+	return func(client *Client) error {
+		if url == "" {
+			err := fmt.Errorf("URL is empty\n")
+			return err
+		}
+		if strings.HasSuffix(url, "/") {
+			client.URL = url
+		} else {
+			client.URL = url + "/"
+		}
+		return nil
+	}
+}
 
 func SetUsername(username string) OptionFunc {
 	return func(client *Client) error {
@@ -68,17 +87,28 @@ func SetAPIToken(token string) OptionFunc {
 
 func New(options ...OptionFunc) (c *Client, err error) {
 	c = new(Client)
+	c.URL = defaultURL
 	for _, option := range options {
 		if err := option(c); err != nil {
 			return nil, err
 		}
 	}
 	c.HttpClient = new(http.Client)
+	keys, err := minilock.GenerateKey(c.Username, c.Password)
+	if err != nil {
+		return
+	}
+	c.ID, err = keys.EncodeID()
+	if err != nil {
+		return
+	}
+
 	return c, nil
 }
 
 // UploadFile will upload a given file for a given user on secureShare
-func (c *Client) UploadFile(recipient string, data []byte) (err error) {
+func (c *Client) UploadFile(recipient string, data []byte) (fileID string, err error) {
+	recipientList := strings.Split(recipient, ",")
 	buf := bytes.NewReader(data)
 	log.Printf("UploadFile: data = %d byte\n", len(data))
 	fieldname := "file"
@@ -87,14 +117,26 @@ func (c *Client) UploadFile(recipient string, data []byte) (err error) {
 	var body bytes.Buffer
 	bodyWriter := bufio.NewWriter(&body)
 	mimeW := multipart.NewWriter(bodyWriter)
+	// WIP create a recipientList
+	rh := make(textproto.MIMEHeader)
+	rh.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"`, escapeQuotes("recipientList")))
+	//rh.Set("Content-Type", "multipart/form-data")
+	part, err := mimeW.CreatePart(rh)
+	if err != nil {
+		return
+	}
+	for _, recipient := range recipientList {
+		part.Write([]byte(recipient + "\n"))
+	}
+
 	fdct := mimeW.FormDataContentType()
-	h := make(textproto.MIMEHeader)
-	h.Set("Content-Disposition",
+	fh := make(textproto.MIMEHeader)
+	fh.Set("Content-Disposition",
 		fmt.Sprintf(`form-data; name="%s"; filename="%s"`,
 			escapeQuotes(fieldname), escapeQuotes(filename)))
-	h.Set("Content-Type", "applaication/octet-stream")
-	log.Printf("mime header: %s\n", h)
-	part, err := mimeW.CreatePart(h)
+	fh.Set("Content-Type", "application/octet-stream")
+	log.Printf("mime header: %s\n", fh)
+	part, err = mimeW.CreatePart(fh)
 	if err != nil {
 		return
 	}
@@ -109,7 +151,7 @@ func (c *Client) UploadFile(recipient string, data []byte) (err error) {
 	bodyWriter.Flush()
 	bodyReader := bufio.NewReader(&body)
 	// build http request
-	req, err := http.NewRequest("POST", "http://127.0.0.1:9999/"+recipient+"/", bodyReader)
+	req, err := http.NewRequest("POST", c.URL+"upload/", bodyReader)
 	if err != nil {
 		return
 	}
@@ -126,14 +168,19 @@ func (c *Client) UploadFile(recipient string, data []byte) (err error) {
 
 	resp, err := c.HttpClient.Do(req)
 	if err != nil {
-		return
+		return "", err
 	}
 	if resp.StatusCode == 200 {
-		return nil
+		fileID, err := ioutil.ReadAll(resp.Body)
+		return string(fileID), err
 	} else {
 		err := fmt.Errorf("Request could not be processed by the server\n")
-		log.Printf("RESPONSE:\n%+v\n", resp)
-		return err
+		dump, errDump := httputil.DumpResponse(resp, true)
+		if errDump != nil {
+			log.Printf("Could not dump response: %s\n", errDump.Error())
+		}
+		log.Printf("RESPONSE:\n%s\n", dump)
+		return "", err
 	}
 }
 
@@ -141,14 +188,24 @@ func (c *Client) ListFiles() (err error) {
 	return
 }
 
-func (c *Client) DownloadFile(fileID string) (filename string, data []byte, err error) {
-	myID := "HZfb8HL4tL7bGJBZq2ha1oyQkf3ePTsLCBBqKog8ESz4y"
-	req, err := http.NewRequest("GET", "http://127.0.0.1:9999/"+myID+"/"+fileID, nil)
+func (c *Client) DownloadFile(fileID string) (filename string, fileContent []byte, err error) {
+	req, err := http.NewRequest("GET", c.URL+c.ID+"/"+fileID, nil)
+	req.Header.Add("APIUsername", c.Username)
+	req.Header.Add("APIKey", c.APIToken)
 	resp, err := c.HttpClient.Do(req)
 	if err != nil {
 		return
 	}
-	fileContent, err := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("Response is NOT OK, Status: %s\n", resp.Status)
+		dump, errDump := httputil.DumpResponse(resp, true)
+		if errDump != nil {
+			log.Printf("Could not dump response '%s'\n", errDump.Error())
+		}
+		log.Printf("ResponseDump:\n%s\n", dump)
+		return
+	}
+	fileContent, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return
 	}
