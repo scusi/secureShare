@@ -12,12 +12,14 @@ import (
 )
 
 var list bool
+var register bool
 var file string
 var fileID string
 var recipient string
 
 func init() {
 	flag.BoolVar(&list, "list", false, "list files waiting in your secureShare box")
+	flag.BoolVar(&register, "register", false, "register at secureShare")
 	flag.StringVar(&file, "send", "", "file to send")
 	flag.StringVar(&fileID, "receive", "", "fileID to retrieve")
 	flag.StringVar(&recipient, "recipient", "", "recipient to send file to, comma separated")
@@ -42,6 +44,12 @@ func main() {
 	checkFatal(err)
 	//fmt.Printf("client: %+v\n", c)
 
+	// register
+	if register {
+		// TODO: fully implement register
+		//token := c.Register(username, password, pubID)
+		return
+	}
 	// list files
 	if list {
 		fileList, err := c.List()
