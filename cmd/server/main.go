@@ -92,6 +92,7 @@ func GenBlake2b32(data []byte) (c string) {
 func Upload(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["UserID"]
+	log.Printf("upload request for '%s'\n", userID)
 	switch r.Method {
 	case "GET":
 		keyChan := store.KeysPrefix(userID, nil)
@@ -99,6 +100,7 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "%s\n", k)
 		}
 	case "POST":
+		log.Printf("Method: POST\n")
 		// TODO: authenticate user
 
 		var inBuf bytes.Buffer
@@ -123,11 +125,14 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 			if part.FileName() == "" {
 				continue
 			}
-			if _, err := io.Copy(inWrt, part); err != nil {
+			log.Printf("part.FileName = '%s'\n", part.FileName())
+			n := int64(0)
+			if n, err = io.Copy(inWrt, part); err != nil {
 				log.Printf("Error copy file part: %s\n", err.Error())
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
+			log.Printf("copied %d byte to mime part\n", n)
 			// TODO: genFileID
 
 			// TODO: store file
