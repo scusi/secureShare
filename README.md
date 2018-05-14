@@ -29,6 +29,10 @@ So the recipient always can be sure who sent the content.
 
 ## Usage Examples
 
+### List available files
+
+```secureShare -list```
+
 ### Send a file
 
 takes a file, encrypt it and send it to a server.
