@@ -8,14 +8,17 @@ import (
 	"github.com/scusi/secureShare/libs/client"
 	"io/ioutil"
 	"log"
+	"strings"
 )
 
 var file string
 var fileID string
+var recipient string
 
 func init() {
-	flag.StringVar(&file, "f", "", "file to send")
-	flag.StringVar(&fileID, "i", "", "fileID to retrieve")
+	flag.StringVar(&file, "send", "", "file to send")
+	flag.StringVar(&fileID, "receive", "", "fileID to retrieve")
+	flag.StringVar(&recipient, "recipient", "", "recipient to send file to, comma separated")
 }
 
 func checkFatal(err error) {
@@ -37,19 +40,21 @@ func main() {
 	checkFatal(err)
 	fmt.Printf("client: %+v\n", c)
 
-	recipientList := []string{"HZfb8HL4tL7bGJBZq2ha1oyQkf3ePTsLCBBqKog8ESz4y"}
+	recipientList := strings.Split(recipient, ",")
 	// read file
 	if file != "" {
+		// encrypt file
 		data, err := ioutil.ReadFile(file)
 		encryptedContent, err := minilock.EncryptFileContentsWithStrings(file, data, c.Username, c.Password, true, recipientList...)
 
 		checkFatal(err)
 		log.Printf("read %d byte from file '%s'\n", len(data), file)
-		// TODO: encrypt file
-		// TODO: HMAC file
 		// upload a file
-		err = c.UploadFile("HZfb8HL4tL7bGJBZq2ha1oyQkf3ePTsLCBBqKog8ESz4y", encryptedContent)
+		fileID, err = c.UploadFile(recipient, encryptedContent)
 		checkFatal(err)
+		log.Printf("file was uploaded for '%s' with fileID is: '%s'\n", recipient, fileID)
+
+		return
 	}
 
 	if fileID != "" {
