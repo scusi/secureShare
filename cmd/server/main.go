@@ -106,7 +106,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token := userDB.APIToken(username)
-	fmt.Fprintf("%s", token)
+	fmt.Fprintf(w, "%s", token)
 	return
 }
 
