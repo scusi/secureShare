@@ -11,11 +11,13 @@ import (
 	"strings"
 )
 
+var list bool
 var file string
 var fileID string
 var recipient string
 
 func init() {
+	flag.BoolVar(&list, "list", false, "list files waiting in your secureShare box")
 	flag.StringVar(&file, "send", "", "file to send")
 	flag.StringVar(&fileID, "receive", "", "fileID to retrieve")
 	flag.StringVar(&recipient, "recipient", "", "recipient to send file to, comma separated")
@@ -38,7 +40,15 @@ func main() {
 		client.SetAPIToken("3f262751d8ebf09fc9a4a2facbb401c80a9589cecb3a231521b3e7ffea402343"),
 	)
 	checkFatal(err)
-	fmt.Printf("client: %+v\n", c)
+	//fmt.Printf("client: %+v\n", c)
+
+	// list files
+	if list {
+		fileList, err := c.List()
+		checkFatal(err)
+		fmt.Printf("%s\n", fileList)
+		return
+	}
 
 	recipientList := strings.Split(recipient, ",")
 	// read file

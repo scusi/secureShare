@@ -184,8 +184,28 @@ func (c *Client) UploadFile(recipient string, data []byte) (fileID string, err e
 	}
 }
 
-func (c *Client) ListFiles() (err error) {
-	return
+func (c *Client) List() (fileList string, err error) {
+	req, err := http.NewRequest("GET", c.URL+"list/", nil)
+	req.Header.Add("APIUsername", c.Username)
+	req.Header.Add("APIKey", c.APIToken)
+	resp, err := c.HttpClient.Do(req)
+	if err != nil {
+		return
+	}
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("Response is NOT OK, Status: %s\n", resp.Status)
+		dump, errDump := httputil.DumpResponse(resp, true)
+		if errDump != nil {
+			log.Printf("Could not dump response '%s'\n", errDump.Error())
+		}
+		log.Printf("ResponseDump:\n%s\n", dump)
+		return
+	}
+	list, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+	return string(list), nil
 }
 
 func (c *Client) DownloadFile(fileID string) (filename string, fileContent []byte, err error) {

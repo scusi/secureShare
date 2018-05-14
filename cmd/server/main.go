@@ -84,6 +84,7 @@ func main() {
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/{UserID}/{FileID}", Download)
 	router.HandleFunc("/upload/", Upload)
+	router.HandleFunc("/list/", List)
 	log.Printf("listenAddr: %s\n", cfg.ListenAddr)
 	log.Fatal(http.ListenAndServe(cfg.ListenAddr, router))
 }
@@ -110,24 +111,22 @@ func GenBlake2s(data []byte) (c string, err error) {
 	return
 }
 
+func List(w http.ResponseWriter, r *http.Request) {
+	username := r.Header.Get("Apiusername")
+	token := r.Header.Get("Apikey")
+	if userDB.APIAuthenticate(username, token) != true {
+		http.Error(w, "Unauthorized", 401)
+		return
+	}
+	keyChan := store.KeysPrefix(userDB.PubID(username), nil)
+	for k := range keyChan {
+		k = strings.TrimPrefix(k, userDB.PubID(username)+"/")
+		fmt.Fprintf(w, "'%s'", k)
+	}
+}
+
 func Upload(w http.ResponseWriter, r *http.Request) {
-	/*
-		vars := mux.Vars(r)
-		userID := vars["UserID"]
-		log.Printf("upload request for '%s'\n", userID)
-	*/
 	switch r.Method {
-	case "GET":
-		username := r.Header.Get("Apiusername")
-		token := r.Header.Get("Apikey")
-		if userDB.APIAuthenticate(username, token) != true {
-			http.Error(w, "Unauthorized", 401)
-			return
-		}
-		keyChan := store.KeysPrefix(userDB.PubID(username), nil)
-		for k := range keyChan {
-			fmt.Fprintf(w, "%s\n", k)
-		}
 	case "POST":
 		log.Printf("Method: POST\n")
 		// TODO: authenticate user
@@ -200,6 +199,9 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 			}
 			fmt.Fprintf(w, fileID)
 		}
+	default:
+		http.Error(w, "Method not allowed", 405)
+		return
 	}
 }
 
