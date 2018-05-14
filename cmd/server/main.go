@@ -6,8 +6,10 @@ import (
 	"flag"
 	"fmt"
 	"github.com/dchest/blake2b"
+	"github.com/dchest/blake2s"
 	"github.com/gorilla/mux"
 	"github.com/peterbourgon/diskv"
+	"github.com/scusi/secureShare/libs/user"
 	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
@@ -16,6 +18,8 @@ import (
 	"path/filepath"
 	"strings"
 )
+
+var userDB *user.UserDB
 
 var configFile string
 var listenAddr string
@@ -66,6 +70,10 @@ func main() {
 	}
 	cfg := new(Config)
 	yaml.Unmarshal(cdata, cfg)
+	userDB, err = user.LoadFromFile(cfg.UsersFile)
+	if err != nil {
+		log.Fatal(err)
+	}
 	// init file storage
 	store = diskv.New(diskv.Options{
 		BasePath:          cfg.DataDir,
@@ -75,7 +83,7 @@ func main() {
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/{UserID}/{FileID}", Download)
-	router.HandleFunc("/{UserID}/", Upload)
+	router.HandleFunc("/upload/", Upload)
 	log.Printf("listenAddr: %s\n", cfg.ListenAddr)
 	log.Fatal(http.ListenAndServe(cfg.ListenAddr, router))
 }
@@ -89,13 +97,34 @@ func GenBlake2b32(data []byte) (c string) {
 	return fmt.Sprintf("%x", bsum)
 }
 
+func GenBlake2s(data []byte) (c string, err error) {
+	hash, err := blake2s.New(&blake2s.Config{Size: 4, Person: []byte("scusi.v1")})
+	if err != nil {
+		return
+	}
+	_, err = hash.Write(data)
+	if err != nil {
+		return
+	}
+	c = fmt.Sprintf("%x", hash.Sum(nil))
+	return
+}
+
 func Upload(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userID := vars["UserID"]
-	log.Printf("upload request for '%s'\n", userID)
+	/*
+		vars := mux.Vars(r)
+		userID := vars["UserID"]
+		log.Printf("upload request for '%s'\n", userID)
+	*/
 	switch r.Method {
 	case "GET":
-		keyChan := store.KeysPrefix(userID, nil)
+		username := r.Header.Get("Apiusername")
+		token := r.Header.Get("Apikey")
+		if userDB.APIAuthenticate(username, token) != true {
+			http.Error(w, "Unauthorized", 401)
+			return
+		}
+		keyChan := store.KeysPrefix(userDB.PubID(username), nil)
 		for k := range keyChan {
 			fmt.Fprintf(w, "%s\n", k)
 		}
@@ -115,12 +144,22 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//copy each part to destination.
+		var recList bytes.Buffer
+		recListWriter := bufio.NewWriter(&recList)
 		for {
 			part, err := reader.NextPart()
 			if err == io.EOF {
 				break
 			}
-
+			if part.FormName() == "recipientList" {
+				log.Printf("recipientList from part: %+v", part)
+				n, err := io.Copy(recListWriter, part)
+				if err != nil {
+					log.Printf("io.Copy error recipientList: %s\n", err.Error())
+					return
+				}
+				log.Printf("Copied %d byte from recList\n", n)
+			}
 			//if part.FileName() is empty, skip this iteration.
 			if part.FileName() == "" {
 				continue
@@ -133,30 +172,66 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			log.Printf("copied %d byte to mime part\n", n)
-			// TODO: genFileID
-
-			// TODO: store file
-			fileID := GenBlake2b32(inBuf.Bytes())
-			filePath := filepath.Join(userID, fileID)
-			log.Printf("filePath: %s\n", filePath)
-			err = store.Write(filePath, inBuf.Bytes())
+			// genFileID
+			//fileID := GenBlake2b32(inBuf.Bytes())
+			fileID, err := GenBlake2s(inBuf.Bytes())
 			if err != nil {
-				log.Println(err)
+				log.Printf("error generating checksum blake2s: %s\n", err.Error())
+				//http.Error(w, err.Error(), 500)
+				fileID = GenBlake2b32(inBuf.Bytes())
 			}
-			fmt.Fprintf(w, "files has been saved\n")
+
+			// store file
+			log.Printf("recList: %s\n", string(recList.Bytes()))
+			recipientList := strings.Split(string(recList.Bytes()), "\n")
+			for i, r := range recipientList {
+				if r == "" {
+					recipientList = append(recipientList[:i], recipientList[i+1:]...)
+				}
+			}
+			log.Printf("recipientList: %q\n", recipientList)
+			for _, userID := range recipientList {
+				filePath := filepath.Join(userID, fileID)
+				log.Printf("filePath: %s\n", filePath)
+				err = store.Write(filePath, inBuf.Bytes())
+				if err != nil {
+					log.Println(err)
+				}
+			}
+			fmt.Fprintf(w, fileID)
 		}
 	}
 }
 
 func Download(w http.ResponseWriter, r *http.Request) {
+	username := r.Header.Get("Apiusername")
+	token := r.Header.Get("Apikey")
+	if userDB.APIAuthenticate(username, token) != true {
+		http.Error(w, "Unauthorized", 401)
+		return
+	}
 	vars := mux.Vars(r)
 	userID := vars["UserID"]
 	fileID := vars["FileID"]
 	filePath := strings.Join([]string{userID, fileID}, "/")
 	data, err := store.Read(filePath)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		log.Printf("download error: %s\n", err.Error())
+		http.Error(w, "file not found", 404)
+		return
 	}
 	w.Header().Set("Content-Disposition", "attachment; filename=\""+fileID+"\"")
-	w.Write(data)
+	n, err := w.Write(data)
+	if err != nil {
+		log.Printf("error writing data to client")
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	log.Printf("written %d byte to client\n", n)
+	err = store.Erase(filePath)
+	if err != nil {
+		log.Printf("error erase file after download")
+		http.Error(w, err.Error(), 500)
+		return
+	}
 }
