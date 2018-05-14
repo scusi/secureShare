@@ -93,7 +93,7 @@ func main() {
 func Register(w http.ResponseWriter, r *http.Request) {
 	username := r.PostFormValue("username")
 	password := r.PostFormValue("password")
-	pubID := r.PostFormValue("PubID")
+	pubID := r.PostFormValue("pubID")
 	// TODO: check if pubID is a syntactical valid minilock ID
 
 	if userDB.Lookup(username) {
@@ -144,7 +144,7 @@ func List(w http.ResponseWriter, r *http.Request) {
 	for k := range keyChan {
 		//TODO: get the file time and display it
 		k = strings.TrimPrefix(k, userDB.PubID(username)+"/")
-		fmt.Fprintf(w, "'%s'", k)
+		fmt.Fprintf(w, "'%s'\n", k)
 	}
 }
 

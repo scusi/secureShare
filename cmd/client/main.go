@@ -5,12 +5,22 @@ import (
 	"flag"
 	"fmt"
 	"github.com/cathalgarvey/go-minilock"
+	"github.com/scusi/secureShare/libs/askpass"
 	"github.com/scusi/secureShare/libs/client"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
+	"net/http"
+	"os"
+	"os/user"
+	"path/filepath"
 	"strings"
 )
 
+var defClientConfigFile string
+var clientConfigFile string
+
+var Debug bool
 var list bool
 var register bool
 var file string
@@ -18,8 +28,15 @@ var fileID string
 var recipient string
 
 func init() {
+	flag.BoolVar(&Debug, "debug", false, "enables debug output when 'true'")
+	// get user home dir
+	usr, err := user.Current()
+	checkFatal(err)
+	defClientConfigFile = filepath.Join(usr.HomeDir, "secureshare", "client.yml")
+	// configure flags
 	flag.BoolVar(&list, "list", false, "list files waiting in your secureShare box")
 	flag.BoolVar(&register, "register", false, "register at secureShare")
+	flag.StringVar(&clientConfigFile, "conf", defClientConfigFile, "client configfile to location")
 	flag.StringVar(&file, "send", "", "file to send")
 	flag.StringVar(&fileID, "receive", "", "fileID to retrieve")
 	flag.StringVar(&recipient, "recipient", "", "recipient to send file to, comma separated")
@@ -33,22 +50,44 @@ func checkFatal(err error) {
 
 func main() {
 	flag.Parse()
-	// read and parse config
-	// TODO
-	// generate a new Client
-	c, err := client.New(
-		client.SetUsername("flw@posteo.de"),
-		client.SetPassword("1q2w3e4r5t"),
-		client.SetAPIToken("3f262751d8ebf09fc9a4a2facbb401c80a9589cecb3a231521b3e7ffea402343"),
-	)
-	checkFatal(err)
-	//fmt.Printf("client: %+v\n", c)
 
 	// register
 	if register {
 		// TODO: fully implement register
-		//token := c.Register(username, password, pubID)
+		email, password := askpass.Credentials()
+		keys, err := minilock.GenerateKey(email, password)
+		checkFatal(err)
+		pubID, err := keys.EncodeID()
+		checkFatal(err)
+		c, err := client.New(
+			client.SetUsername(email),
+			client.SetPassword(password),
+			//client.SetAPIToken(token),
+		)
+		checkFatal(err)
+		token, err := c.Register(email, password, pubID)
+		checkFatal(err)
+		c.APIToken = token
+		cy, err := yaml.Marshal(c)
+		checkFatal(err)
+		clientConfigPath := filepath.Dir(clientConfigFile)
+		err = os.MkdirAll(clientConfigPath, 0700)
+		checkFatal(err)
+		err = ioutil.WriteFile(clientConfigFile, cy, 0700)
+		checkFatal(err)
+		log.Printf("your configuration has been saved under: '%s'\n", clientConfigFile)
 		return
+	}
+
+	// load client from config
+	var c client.Client
+	data, err := ioutil.ReadFile(clientConfigFile)
+	checkFatal(err)
+	err = yaml.Unmarshal(data, &c)
+	checkFatal(err)
+	c.SetHttpClient(new(http.Client))
+	if Debug {
+		fmt.Printf("client: %+v\n", c)
 	}
 	// list files
 	if list {

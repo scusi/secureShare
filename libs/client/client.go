@@ -19,13 +19,20 @@ import (
 
 const defaultURL = "http://127.0.0.1:9999/"
 
+var Debug bool
+
 type Client struct {
 	ID         string
 	Username   string
 	Password   string
 	APIToken   string
 	URL        string
-	HttpClient *http.Client
+	httpClient *http.Client
+}
+
+func (c *Client) Do(r *http.Request) (resp *http.Response, err error) {
+	resp, err = c.httpClient.Do(r)
+	return
 }
 
 var quoteEscaper = strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
@@ -94,7 +101,7 @@ func New(options ...OptionFunc) (c *Client, err error) {
 			return nil, err
 		}
 	}
-	c.HttpClient = new(http.Client)
+	c.httpClient = new(http.Client)
 	keys, err := minilock.GenerateKey(c.Username, c.Password)
 	if err != nil {
 		return
@@ -107,6 +114,10 @@ func New(options ...OptionFunc) (c *Client, err error) {
 	return c, nil
 }
 
+func (c *Client) SetHttpClient(hc *http.Client) {
+	c.httpClient = hc
+}
+
 func (c *Client) Register(username, password, pubID string) (token string, err error) {
 	v := url.Values{}
 	v.Add("username", username)
@@ -116,7 +127,7 @@ func (c *Client) Register(username, password, pubID string) (token string, err e
 	if err != nil {
 		return
 	}
-	resp, err := c.HttpClient.Do(req)
+	resp, err := c.Do(req)
 	if err != nil {
 		return
 	}
@@ -179,15 +190,17 @@ func (c *Client) UploadFile(recipient string, data []byte) (fileID string, err e
 	req.Header.Add("Content-Type", fdct)
 	req.Header.Add("APIUsername", c.Username)
 	req.Header.Add("APIKey", c.APIToken)
-	dump, err := httputil.DumpRequestOut(req, true)
-	if err != nil {
-		log.Fatal(err)
+	/*
+	 */
+	if Debug {
+		dump, err := httputil.DumpRequestOut(req, true)
+		if err != nil {
+			log.Fatal(err)
 
+		}
+		log.Printf("%s", dump)
 	}
-
-	log.Printf("%s", dump)
-
-	resp, err := c.HttpClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -209,7 +222,7 @@ func (c *Client) List() (fileList string, err error) {
 	req, err := http.NewRequest("GET", c.URL+"list/", nil)
 	req.Header.Add("APIUsername", c.Username)
 	req.Header.Add("APIKey", c.APIToken)
-	resp, err := c.HttpClient.Do(req)
+	resp, err := c.Do(req)
 	if err != nil {
 		return
 	}
@@ -233,7 +246,7 @@ func (c *Client) DownloadFile(fileID string) (filename string, fileContent []byt
 	req, err := http.NewRequest("GET", c.URL+c.ID+"/"+fileID, nil)
 	req.Header.Add("APIUsername", c.Username)
 	req.Header.Add("APIKey", c.APIToken)
-	resp, err := c.HttpClient.Do(req)
+	resp, err := c.Do(req)
 	if err != nil {
 		return
 	}
