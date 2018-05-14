@@ -29,6 +29,18 @@ So the recipient always can be sure who sent the content.
 
 ## Usage Examples
 
+### Setup secureShare
+
+Before you can use secureShare the first time you need to register.
+
+```secureShare -register```
+
+You will be asked for your email (username) and a password.
+From that username and password minilock keys will be generated.
+Then your public minilock ID (encodeID) is sent to the server.
+The server issues an APIToken which is sent back to the client.
+Subsequent requests are then authenticated by username and APIToken.
+
 ### List available files
 
 ```secureShare -list```
