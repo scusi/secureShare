@@ -123,13 +123,23 @@ func (c *Client) Register(username, password, pubID string) (token string, err e
 	v.Add("username", username)
 	v.Add("password", password)
 	v.Add("pubID", pubID)
-	req, err := http.NewRequest("POST", c.URL+"register", strings.NewReader(v.Encode()))
+	// does not work
+	//req, err := http.NewRequest("POST", c.URL+"register", strings.NewReader(v.Encode()))
+	req, err := http.NewRequest("GET", c.URL+"register?"+v.Encode(), nil)
 	if err != nil {
 		return
+	}
+	if Debug {
+		dump, _ := httputil.DumpRequestOut(req, true)
+		log.Printf("%s", dump)
 	}
 	resp, err := c.Do(req)
 	if err != nil {
 		return
+	}
+	if Debug {
+		dump, _ := httputil.DumpResponse(resp, true)
+		log.Printf("%s", dump)
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {

@@ -51,6 +51,9 @@ func checkFatal(err error) {
 func main() {
 	flag.Parse()
 
+	if Debug {
+		client.Debug = true
+	}
 	// register
 	if register {
 		// TODO: fully implement register

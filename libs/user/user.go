@@ -9,6 +9,8 @@ import (
 	"log"
 )
 
+var Debug bool
+
 type UserDB struct {
 	Path  string
 	Users []User
@@ -96,7 +98,10 @@ func (udb *UserDB) Save(path string) (err error) {
 	return
 }
 
-func (udb *UserDB) Add(username, password, PubID string) (err error) {
+func (udb *UserDB) Add(username, password, pubID string) (err error) {
+	if Debug {
+		log.Printf("userDB.Add: username: '%s', password: '%s', pubID: '%s'", username, password, pubID)
+	}
 	doesExist := udb.Lookup(username)
 	if doesExist {
 		err = fmt.Errorf("invalid username, please choose another one.")
@@ -109,7 +114,7 @@ func (udb *UserDB) Add(username, password, PubID string) (err error) {
 		return
 	}
 	u.Password = string(passwdbyt)
-	u.PubID = PubID
+	u.PubID = pubID
 	u.APIToken = newAPIToken()
 	udb.Users = append(udb.Users, *u)
 	//nudb.Path = udb.Path

@@ -21,6 +21,7 @@ import (
 
 var userDB *user.UserDB
 
+var Debug bool
 var configFile string
 var listenAddr string
 var store *diskv.Diskv
@@ -34,6 +35,7 @@ type Config struct {
 }
 
 func init() {
+	flag.BoolVar(&Debug, "debug", true, "enables debug output, when 'true'")
 	flag.StringVar(&configFile, "conf", "", "config file to use (yaml)")
 	flag.StringVar(&listenAddr, "l", "127.0.0.1:9999", "address to listen on, default is: 127.0.0.1:9999")
 }
@@ -91,15 +93,20 @@ func main() {
 }
 
 func Register(w http.ResponseWriter, r *http.Request) {
-	username := r.PostFormValue("username")
-	password := r.PostFormValue("password")
-	pubID := r.PostFormValue("pubID")
+	log.Printf("Register -->")
+	username := r.FormValue("username")
+	password := r.FormValue("password")
+	pubID := r.FormValue("pubID")
+	if Debug {
+		log.Printf("username: '%s', password: '%s', pubID: '%s'", username, password, pubID)
+	}
 	// TODO: check if pubID is a syntactical valid minilock ID
 
 	if userDB.Lookup(username) {
 		http.Error(w, "User already existing", 500)
 		return
 	}
+	log.Printf("going to add new user '%s' with pubID '%s'\n", username, pubID)
 	err := userDB.Add(username, password, pubID)
 	if err != nil {
 		http.Error(w, "adding user failed", 500)
