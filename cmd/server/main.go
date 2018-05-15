@@ -9,7 +9,7 @@ import (
 	"github.com/dchest/blake2s"
 	"github.com/gorilla/mux"
 	"github.com/peterbourgon/diskv"
-	"github.com/scusi/secureShare/libs/user"
+	"github.com/scusi/secureShare/libs/server/user"
 	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
