@@ -3,13 +3,17 @@ package user
 import (
 	"crypto/rand"
 	"fmt"
-	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
 )
 
 var Debug bool
+
+type User struct {
+	Name     string // this is the scrypt hash of the users encodeID
+	APIToken string // server issued token to authenticate to the secureShare API
+}
 
 type UserDB struct {
 	Path  string
@@ -19,7 +23,7 @@ type UserDB struct {
 /* From within your program you do this:
 
 ```
-import "github.com/scusi/secureShare/libs/user"
+import "github.com/scusi/secureShare/libs/server/user"
 
 var userDB []user.User
 
@@ -73,13 +77,6 @@ func SaveToFile(udb UserDB, path string) (err error) {
 	return
 }
 
-type User struct {
-	Name     string
-	Password string
-	APIToken string
-	PubID    string
-}
-
 func (udb *UserDB) Save(path string) (err error) {
 	if path != "" {
 		udb.Path = path
@@ -98,9 +95,9 @@ func (udb *UserDB) Save(path string) (err error) {
 	return
 }
 
-func (udb *UserDB) Add(username, password, pubID string) (err error) {
+func (udb *UserDB) Add(username string) (err error) {
 	if Debug {
-		log.Printf("userDB.Add: username: '%s', password: '%s', pubID: '%s'", username, password, pubID)
+		log.Printf("userDB.Add: username: '%s'", username)
 	}
 	doesExist := udb.Lookup(username)
 	if doesExist {
@@ -109,17 +106,12 @@ func (udb *UserDB) Add(username, password, pubID string) (err error) {
 	}
 	u := new(User)
 	u.Name = username
-	passwdbyt, err := bcrypt.GenerateFromPassword([]byte(password), 0)
-	if err != nil {
-		return
-	}
-	u.Password = string(passwdbyt)
-	u.PubID = pubID
 	u.APIToken = newAPIToken()
 	udb.Users = append(udb.Users, *u)
-	//nudb.Path = udb.Path
 	udb.Save("")
-	log.Printf("nudb: %#v\n", udb)
+	if Debug {
+		log.Printf("udb: %#v\n", udb)
+	}
 	return
 }
 
@@ -151,25 +143,6 @@ func (udb *UserDB) Lookup(username string) (ok bool) {
 	return false
 }
 
-// Authenticate will autenticate a given user with a given password.
-// returns true if the password was correct, otherwise false
-func (udb *UserDB) Authenticate(username, password string) (ok bool) {
-	var storedHash string
-	for _, u := range udb.Users {
-		if u.Name == username {
-			storedHash = u.Password
-		}
-	}
-	if storedHash == "" {
-		return false
-	}
-	err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(password))
-	if err == nil {
-		return true
-	}
-	return false
-}
-
 func (udb *UserDB) APIAuthenticate(username, APIToken string) (ok bool) {
 	for _, u := range udb.Users {
 		if u.Name == username {
@@ -178,18 +151,6 @@ func (udb *UserDB) APIAuthenticate(username, APIToken string) (ok bool) {
 		}
 	}
 	return false
-}
-
-// SetPassword - will set a given password for a given user
-func (udb *UserDB) SetPassword(username, password string) (err error) {
-	udb.Save("")
-	return
-}
-
-// ChangePassword - will set a new given password for a given username if the current password given was correct
-func (udb *UserDB) ChangePassword(username, oldPasswd, newPasswd string) (ok bool, err error) {
-	udb.Save("")
-	return
 }
 
 // newAPIToken - generates a new random token for API usage
@@ -216,15 +177,6 @@ func (udb *UserDB) APIToken(username string) (APIToken string) {
 	for _, u := range udb.Users {
 		if u.Name == username {
 			return u.APIToken
-		}
-	}
-	return ""
-}
-
-func (udb *UserDB) PubID(username string) (pubid string) {
-	for _, u := range udb.Users {
-		if u.Name == username {
-			return u.PubID
 		}
 	}
 	return ""
