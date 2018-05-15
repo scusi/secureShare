@@ -32,7 +32,7 @@ func init() {
 	// get user home dir
 	usr, err := user.Current()
 	checkFatal(err)
-	defClientConfigFile = filepath.Join(usr.HomeDir, "secureshare", "client.yml")
+	defClientConfigFile = filepath.Join(usr.HomeDir, ".config", "secureshare", "client.yml")
 	// configure flags
 	flag.BoolVar(&list, "list", false, "list files waiting in your secureShare box")
 	flag.BoolVar(&register, "register", false, "register at secureShare")
