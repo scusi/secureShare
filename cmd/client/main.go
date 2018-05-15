@@ -62,6 +62,7 @@ func main() {
 		checkFatal(err)
 		pubID, err := keys.EncodeID()
 		checkFatal(err)
+		// TODO: scrypt pubID to get username for server
 		c, err := client.New(
 			client.SetUsername(email),
 			client.SetPassword(password),
