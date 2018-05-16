@@ -4,8 +4,12 @@ package client
 import (
 	"bufio"
 	"bytes"
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"github.com/cathalgarvey/go-minilock"
+	"github.com/cathalgarvey/go-minilock/taber"
+	"golang.org/x/crypto/scrypt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -22,9 +26,10 @@ const defaultURL = "http://127.0.0.1:9999/"
 var Debug bool
 
 type Client struct {
-	ID         string
+	PublicKey  string
+	Keys       *taber.Keys
+	Salt       []byte
 	Username   string
-	Password   string
 	APIToken   string
 	URL        string
 	httpClient *http.Client
@@ -70,15 +75,10 @@ func SetUsername(username string) OptionFunc {
 	}
 }
 
-func SetPassword(password string) OptionFunc {
+func SetKeys(keys *taber.Keys) OptionFunc {
 	return func(client *Client) error {
-		if password == "" {
-			err := fmt.Errorf("Password is empty\n")
-			return err
-		}
-		client.Password = password
+		client.Keys = keys
 		return nil
-
 	}
 }
 
@@ -101,27 +101,31 @@ func New(options ...OptionFunc) (c *Client, err error) {
 			return nil, err
 		}
 	}
+	salt := make([]byte, 16)
+	_, err = rand.Read(salt)
+	if err != nil {
+		return nil, err
+	}
+	c.Salt = salt
 	c.httpClient = new(http.Client)
-	keys, err := minilock.GenerateKey(c.Username, c.Password)
-	if err != nil {
-		return
-	}
-	c.ID, err = keys.EncodeID()
-	if err != nil {
-		return
-	}
-
 	return c, nil
+}
+
+func (c *Client) ID() (id string) {
+	dk, err := scrypt.Key([]byte(c.PublicKey), c.Salt, 1<<15, 8, 1, 32)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return base64.URLEncoding.EncodeToString(dk)
 }
 
 func (c *Client) SetHttpClient(hc *http.Client) {
 	c.httpClient = hc
 }
 
-func (c *Client) Register(username, password, pubID string) (token string, err error) {
+func (c *Client) Register(username, pubID string) (token string, err error) {
 	v := url.Values{}
 	v.Add("username", username)
-	v.Add("password", password)
 	v.Add("pubID", pubID)
 	// does not work
 	//req, err := http.NewRequest("POST", c.URL+"register", strings.NewReader(v.Encode()))
@@ -232,6 +236,13 @@ func (c *Client) List() (fileList string, err error) {
 	req, err := http.NewRequest("GET", c.URL+"list/", nil)
 	req.Header.Add("APIUsername", c.Username)
 	req.Header.Add("APIKey", c.APIToken)
+	if Debug {
+		dump, errDump := httputil.DumpRequestOut(req, true)
+		if errDump != nil {
+			log.Printf("Could not dump request '%s'\n", errDump.Error())
+		}
+		log.Printf("RequestDump:\n%s\n", dump)
+	}
 	resp, err := c.Do(req)
 	if err != nil {
 		return
@@ -253,9 +264,16 @@ func (c *Client) List() (fileList string, err error) {
 }
 
 func (c *Client) DownloadFile(fileID string) (filename string, fileContent []byte, err error) {
-	req, err := http.NewRequest("GET", c.URL+c.ID+"/"+fileID, nil)
+	req, err := http.NewRequest("GET", c.URL+c.Username+"/"+fileID, nil)
 	req.Header.Add("APIUsername", c.Username)
 	req.Header.Add("APIKey", c.APIToken)
+	if Debug {
+		dump, errDump := httputil.DumpRequestOut(req, true)
+		if errDump != nil {
+			log.Printf("Could not dump request '%s'\n", errDump.Error())
+		}
+		log.Printf("RequestDump:\n%s\n", dump)
+	}
 	resp, err := c.Do(req)
 	if err != nil {
 		return
@@ -273,8 +291,8 @@ func (c *Client) DownloadFile(fileID string) (filename string, fileContent []byt
 	if err != nil {
 		return
 	}
-
-	senderId, filename, content, err := minilock.DecryptFileContentsWithStrings(fileContent, c.Username, c.Password)
+	senderId, filename, content, err := minilock.DecryptFileContents(fileContent, c.Keys)
+	//senderId, filename, content, err := minilock.DecryptFileContentsWithStrings(fileContent, c.Username, c.Password)
 	if err != nil {
 		log.Printf("decryption error: '%s'\n", err.Error())
 	}
