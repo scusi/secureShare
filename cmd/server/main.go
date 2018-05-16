@@ -41,10 +41,10 @@ func init() {
 }
 
 func AdvancedTransformExample(key string) *diskv.PathKey {
-	log.Printf("Atransform: key: %s\n", key)
+	//log.Printf("Atransform: key: %s\n", key)
 	path := strings.Split(key, "/")
 	last := len(path) - 1
-	log.Printf("path: '%s', last: '%d\n", path, last)
+	//log.Printf("path: '%s', last: '%d\n", path, last)
 	return &diskv.PathKey{
 		Path:     path[:last],
 		FileName: path[last],
@@ -56,9 +56,9 @@ func AdvancedTransformExample(key string) *diskv.PathKey {
 // inverse:
 
 func InverseTransformExample(pathKey *diskv.PathKey) (key string) {
-	log.Printf("revTransform: pathKey: %+v\n", pathKey)
+	//log.Printf("revTransform: pathKey: %+v\n", pathKey)
 	key = strings.Join(pathKey.Path, "/") + "/" + pathKey.FileName
-	log.Printf("revTransform: key: %s\n", key)
+	//log.Printf("revTransform: key: %s\n", key)
 	return key
 
 }
@@ -88,6 +88,7 @@ func main() {
 	router.HandleFunc("/upload/", Upload)
 	router.HandleFunc("/list/", List)
 	router.HandleFunc("/register/", Register)
+	router.HandleFunc("/lookupKey", LookupKey)
 	log.Printf("listenAddr: %s\n", cfg.ListenAddr)
 	log.Fatal(http.ListenAndServe(cfg.ListenAddr, router))
 }
@@ -107,7 +108,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("going to add new user '%s' with pubID '%s'\n", username, pubID)
-	err := userDB.Add(username, password, pubID)
+	err := userDB.Add(username, pubID)
 	if err != nil {
 		http.Error(w, "adding user failed", 500)
 		return
@@ -115,6 +116,15 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	token := userDB.APIToken(username)
 	fmt.Fprintf(w, "%s", token)
 	return
+}
+
+func LookupKey(w http.ResponseWriter, r *http.Request) {
+	username := r.FormValue("username")
+	if username == "" {
+		http.Error(w, "'username' not supplied", 400)
+	}
+	publicKey := userDB.PublicKey(username)
+	fmt.Fprintf(w, "%s", publicKey)
 }
 
 // GenBlake2b32 - genertes a blake2b 32 byte checksum over given data.
@@ -147,10 +157,10 @@ func List(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", 401)
 		return
 	}
-	keyChan := store.KeysPrefix(userDB.PubID(username), nil)
+	keyChan := store.KeysPrefix(username, nil)
 	for k := range keyChan {
 		//TODO: get the file time and display it
-		k = strings.TrimPrefix(k, userDB.PubID(username)+"/")
+		k = strings.TrimPrefix(k, username+"/")
 		fmt.Fprintf(w, "'%s'\n", k)
 	}
 }
@@ -220,12 +230,18 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 			}
 			log.Printf("recipientList: %q\n", recipientList)
 			for _, userID := range recipientList {
-				filePath := filepath.Join(userID, fileID)
+				name := userDB.LookupNameByPubkey(userID)
+				if name == "" {
+					log.Printf("No user found with pubkey: '%s'\n", userID)
+					continue
+				}
+				filePath := filepath.Join(name, fileID)
 				log.Printf("filePath: %s\n", filePath)
 				err = store.Write(filePath, inBuf.Bytes())
 				if err != nil {
 					log.Println(err)
 				}
+				log.Printf("file '%s' saved under: '%s'", fileID, filePath)
 			}
 			fmt.Fprintf(w, fileID)
 		}
