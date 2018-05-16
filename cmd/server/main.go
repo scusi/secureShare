@@ -89,8 +89,14 @@ func main() {
 	router.HandleFunc("/list/", List)
 	router.HandleFunc("/register/", Register)
 	router.HandleFunc("/lookupKey", LookupKey)
-	log.Printf("listenAddr: %s\n", cfg.ListenAddr)
-	log.Fatal(http.ListenAndServe(cfg.ListenAddr, router))
+
+	if cfg.CertFile != "" && cfg.KeyFile != "" {
+		log.Printf("listenAddr: %s (TLS)\n", cfg.ListenAddr)
+		log.Fatal(http.ListenAndServeTLS(cfg.ListenAddr, cfg.CertFile, cfg.KeyFile, router))
+	} else {
+		log.Printf("listenAddr: %s\n", cfg.ListenAddr)
+		log.Fatal(http.ListenAndServe(cfg.ListenAddr, router))
+	}
 }
 
 func Register(w http.ResponseWriter, r *http.Request) {

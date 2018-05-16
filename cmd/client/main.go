@@ -34,6 +34,7 @@ var fileID string
 var recipient string
 var usr *user.User
 var err error
+var URL string
 
 func init() {
 	flag.BoolVar(&Debug, "debug", false, "enables debug output when 'true'")
@@ -50,6 +51,7 @@ func init() {
 	flag.StringVar(&file, "send", "", "file to send")
 	flag.StringVar(&fileID, "receive", "", "fileID to retrieve")
 	flag.StringVar(&recipient, "recipient", "", "recipient to send file to, comma separated")
+	flag.StringVar(&URL, "url", "http://127.0.0.1:9999/", "url of the secureShare server to use")
 }
 
 func checkFatal(err error) {
@@ -83,6 +85,7 @@ func main() {
 		c, err := client.New(
 			client.SetUsername(username),
 			client.SetKeys(keys),
+			client.SetURL(URL),
 			//client.SetAPIToken(token),
 		)
 		checkFatal(err)
@@ -169,6 +172,8 @@ func main() {
 		if err != nil {
 			checkFatal(err)
 		}
+		// make sure filename contains no path
+		filename = filepath.Base(filename)
 		err = ioutil.WriteFile(filename, data, 0700)
 		checkFatal(err)
 		log.Printf("fileID '%s' written to '%s'\n", fileID, filename)
