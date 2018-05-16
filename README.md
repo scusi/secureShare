@@ -59,9 +59,25 @@ asks server for a given fileID, downloads file, decrypts it and saves it to disk
 
 ### Server
 
+#### before you start the first time
+
+Before you can run the server you need to have a users file, where the serverstores information about registered users.
+In order to create an empty users file runn the following command:
+
+```
+secureShareServerNewUserDB
+```
+
+Above command will create a users.yml file in the local directory.
+Make sure the path to this file is set correctly in config.yml
+
 takes files from clients and stores them until someone picks the file up.
 
+#### starting the server
+
 ```secureShareServer -conf config.yml```
+
+#### example server config
 
 A typical server config file looks like:
 
@@ -73,7 +89,7 @@ datadir: "data"
 usersfile: "users.yml"
 ```
 
-#### Config file options
+#### Server config options
 
 * listenaddr:	is the listening address where _secureShareServer_ waits for connections
 * certfile:	is the path tho the PEM encoded TLS certificate beeing used to provide TLS transport security (aka HTTPS)
@@ -84,3 +100,6 @@ usersfile: "users.yml"
 		The data directory will be created if not existing and filesystem permissions allow so.
 * usersfile:	is the path to the yaml encoded file that holds information about the users.
 
+## Releases
+
+Precompiled binaries for various operating systems and architectures can be found unter [releases](releases/)
