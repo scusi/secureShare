@@ -11,8 +11,9 @@ import (
 var Debug bool
 
 type User struct {
-	Name     string // this is the scrypt hash of the users encodeID
-	APIToken string // server issued token to authenticate to the secureShare API
+	Name      string // username choosen by the user
+	APIToken  string // server issued token to authenticate to the secureShare API
+	PublicKey string // minilock EncodeID of the user
 }
 
 type UserDB struct {
@@ -95,7 +96,7 @@ func (udb *UserDB) Save(path string) (err error) {
 	return
 }
 
-func (udb *UserDB) Add(username string) (err error) {
+func (udb *UserDB) Add(username, publicKey string) (err error) {
 	if Debug {
 		log.Printf("userDB.Add: username: '%s'", username)
 	}
@@ -106,6 +107,8 @@ func (udb *UserDB) Add(username string) (err error) {
 	}
 	u := new(User)
 	u.Name = username
+	// TODO: check if the publicKey is syntactitcal correct
+	u.PublicKey = publicKey
 	u.APIToken = newAPIToken()
 	udb.Users = append(udb.Users, *u)
 	udb.Save("")
@@ -141,6 +144,24 @@ func (udb *UserDB) Lookup(username string) (ok bool) {
 		}
 	}
 	return false
+}
+
+func (udb *UserDB) LookupNameByPubkey(pubkey string) (name string) {
+	for _, u := range udb.Users {
+		if u.PublicKey == pubkey {
+			return u.Name
+		}
+	}
+	return ""
+}
+
+func (udb *UserDB) PublicKey(username string) (publicKey string) {
+	for _, u := range udb.Users {
+		if u.Name == username {
+			return u.PublicKey
+		}
+	}
+	return
 }
 
 func (udb *UserDB) APIAuthenticate(username, APIToken string) (ok bool) {
