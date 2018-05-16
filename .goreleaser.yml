@@ -3,8 +3,46 @@
 builds:
 - main: cmd/client/main.go
   binary: secureShare
+  goos:
+          - windows
+          - linux
+          - darwin
+          - freebsd
+          - openbsd
+          - netbsd
+  goarch:
+          - 386
+          - amd64
+          - arm
+          - arm64
 - main: cmd/server/main.go
   binary: secureShareServer
+  goos:
+          - windows
+          - linux
+          - darwin
+          - freebsd
+          - openbsd
+          - netbsd
+  goarch:
+          - 386
+          - amd64
+          - arm
+          - arm64
+- main: cmd/newUserDB/main.go
+  binary: secureShareNewUserDB
+  goos:
+          - windows
+          - linux
+          - darwin
+          - freebsd
+          - openbsd
+          - netbsd
+  goarch:
+          - 386
+          - amd64
+          - arm
+          - arm64
   env:
   - CGO_ENABLED=0
 archive:
@@ -14,6 +52,9 @@ archive:
     windows: Windows
     386: i386
     amd64: x86_64
+  format_overrides:
+  - goos: windows
+    format: zip
 checksum:
   name_template: 'checksums.txt'
 snapshot:
