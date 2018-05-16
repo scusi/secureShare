@@ -7,8 +7,11 @@ import (
 	"flag"
 	"fmt"
 	"github.com/cathalgarvey/go-minilock"
+	"github.com/cathalgarvey/go-minilock/taber"
 	"github.com/scusi/secureShare/libs/askpass"
 	"github.com/scusi/secureShare/libs/client"
+	"github.com/scusi/secureShare/libs/client/addressBook"
+	//"github.com/scusi/secureShare/libs/client/identity"
 	"golang.org/x/crypto/scrypt"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -29,13 +32,17 @@ var register bool
 var file string
 var fileID string
 var recipient string
+var usr *user.User
+var err error
 
 func init() {
 	flag.BoolVar(&Debug, "debug", false, "enables debug output when 'true'")
 	// get user home dir
-	usr, err := user.Current()
+	usr, err = user.Current()
 	checkFatal(err)
-	defClientConfigFile = filepath.Join(usr.HomeDir, ".config", "secureshare", "client.yml")
+	defClientConfigFile = filepath.Join(
+		usr.HomeDir, ".config",
+		"secureshare", "client", "config.yml")
 	// configure flags
 	flag.BoolVar(&list, "list", false, "list files waiting in your secureShare box")
 	flag.BoolVar(&register, "register", false, "register at secureShare")
@@ -59,13 +66,13 @@ func main() {
 	}
 	// register
 	if register {
-		// TODO: fully implement register
+		// ask user for minilock credentials
 		email, password := askpass.Credentials()
 		keys, err := minilock.GenerateKey(email, password)
 		checkFatal(err)
 		pubID, err := keys.EncodeID()
 		checkFatal(err)
-		// TODO: scrypt pubID to get username for server
+		// scrypt pubID to get username for server
 		salt := make([]byte, 16)
 		rand.Read(salt)
 		dk, err := scrypt.Key([]byte(pubID), salt, 1<<15, 8, 1, 32)
@@ -75,24 +82,40 @@ func main() {
 		username := base64.URLEncoding.EncodeToString(dk)
 		c, err := client.New(
 			client.SetUsername(username),
-			//client.SetPassword(password),
+			client.SetKeys(keys),
 			//client.SetAPIToken(token),
 		)
 		checkFatal(err)
 		// WIP - change register function
 		// TODO: what do we do against exhausting attacks and similar
 		//       somehow we need to make it ...
-		token, err := c.Register(username)
+		token, err := c.Register(username, pubID)
 		checkFatal(err)
 		c.APIToken = token
+
+		c.PublicKey = pubID
 		cy, err := yaml.Marshal(c)
 		checkFatal(err)
+		// make sure that the path exists
+		clientConfigFile = filepath.Join(
+			usr.HomeDir, ".config",
+			"secureshare", "client", username, "config.yml")
 		clientConfigPath := filepath.Dir(clientConfigFile)
 		err = os.MkdirAll(clientConfigPath, 0700)
 		checkFatal(err)
+		// write actual config file to disk
 		err = ioutil.WriteFile(clientConfigFile, cy, 0700)
 		checkFatal(err)
 		log.Printf("your configuration has been saved under: '%s'\n", clientConfigFile)
+		a := addressbook.New(username)
+		ay, err := yaml.Marshal(a)
+		checkFatal(err)
+		addressbookPath := filepath.Join(usr.HomeDir, ".config", "secureshare", "client", username)
+		err = os.MkdirAll(addressbookPath, 0700)
+		checkFatal(err)
+		addressbookPath = filepath.Join(addressbookPath, "addressbook.yml")
+		err = ioutil.WriteFile(addressbookPath, ay, 0700)
+		checkFatal(err)
 		return
 	}
 
@@ -114,12 +137,22 @@ func main() {
 		return
 	}
 
-	recipientList := strings.Split(recipient, ",")
 	// read file
 	if file != "" {
+		// prepare recipient keys
+		var recipientKeys []*taber.Keys
+		recipientList := strings.Split(recipient, ",")
+		for _, recipient := range recipientList {
+			keys, err := taber.FromID(recipient)
+			if err != nil {
+				log.Printf("Error generating recipient key for '%s'\n", recipient)
+				continue
+			}
+			recipientKeys = append(recipientKeys, keys)
+		}
 		// encrypt file
 		data, err := ioutil.ReadFile(file)
-		encryptedContent, err := minilock.EncryptFileContentsWithStrings(file, data, c.Username, c.Password, true, recipientList...)
+		encryptedContent, err := minilock.EncryptFileContents(file, data, c.Keys, recipientKeys...)
 
 		checkFatal(err)
 		log.Printf("read %d byte from file '%s'\n", len(data), file)
