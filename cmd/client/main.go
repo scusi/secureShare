@@ -2,11 +2,14 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"github.com/cathalgarvey/go-minilock"
 	"github.com/scusi/secureShare/libs/askpass"
 	"github.com/scusi/secureShare/libs/client"
+	"golang.org/x/crypto/scrypt"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
@@ -63,13 +66,23 @@ func main() {
 		pubID, err := keys.EncodeID()
 		checkFatal(err)
 		// TODO: scrypt pubID to get username for server
+		salt := make([]byte, 16)
+		rand.Read(salt)
+		dk, err := scrypt.Key([]byte(pubID), salt, 1<<15, 8, 1, 32)
+		if err != nil {
+			log.Fatal(err)
+		}
+		username := base64.URLEncoding.EncodeToString(dk)
 		c, err := client.New(
-			client.SetUsername(email),
-			client.SetPassword(password),
+			client.SetUsername(username),
+			//client.SetPassword(password),
 			//client.SetAPIToken(token),
 		)
 		checkFatal(err)
-		token, err := c.Register(email, password, pubID)
+		// WIP - change register function
+		// TODO: what do we do against exhausting attacks and similar
+		//       somehow we need to make it ...
+		token, err := c.Register(username)
 		checkFatal(err)
 		c.APIToken = token
 		cy, err := yaml.Marshal(c)
