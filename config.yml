@@ -1,0 +1,5 @@
+listenaddr: "127.0.0.1:9999"
+certfile: "cert.pem"
+keyfile: "key.pem"
+datadir: "data"
+usersfile: "users.yml"
