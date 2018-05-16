@@ -102,4 +102,4 @@ usersfile: "users.yml"
 
 ## Releases
 
-Precompiled binaries for various operating systems and architectures can be found unter [releases](releases/)
+Precompiled binaries for various operating systems and architectures can be found unter [releases](https://github.com/scusi/secureShare/releases/)
