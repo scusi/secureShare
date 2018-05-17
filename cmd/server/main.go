@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/http/httputil"
 	"path/filepath"
 	"strings"
 )
@@ -102,10 +103,9 @@ func main() {
 func Register(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Register -->")
 	username := r.FormValue("username")
-	password := r.FormValue("password")
 	pubID := r.FormValue("pubID")
 	if Debug {
-		log.Printf("username: '%s', password: '%s', pubID: '%s'", username, password, pubID)
+		log.Printf("username: '%s', pubID: '%s'", username, pubID)
 	}
 	// TODO: check if pubID is a syntactical valid minilock ID
 
@@ -175,6 +175,14 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
 		log.Printf("Method: POST\n")
+		if Debug {
+			dump, errDump := httputil.DumpRequest(r, true)
+			if errDump != nil {
+				log.Printf("ERROR: COULD NOT DUMP REQUEST!")
+			} else {
+				log.Printf("Request:\n%s\n", dump)
+			}
+		}
 		// TODO: authenticate user
 
 		var inBuf bytes.Buffer
@@ -235,13 +243,14 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			log.Printf("recipientList: %q\n", recipientList)
-			for _, userID := range recipientList {
-				name := userDB.LookupNameByPubkey(userID)
-				if name == "" {
-					log.Printf("No user found with pubkey: '%s'\n", userID)
+			for _, userName := range recipientList {
+				//name := userDB.LookupNameByPubkey(userID)
+				isExistent := userDB.Lookup(userName)
+				if isExistent == false {
+					log.Printf("No user found with username: '%s'\n", userName)
 					continue
 				}
-				filePath := filepath.Join(name, fileID)
+				filePath := filepath.Join(userName, fileID)
 				log.Printf("filePath: %s\n", filePath)
 				err = store.Write(filePath, inBuf.Bytes())
 				if err != nil {
