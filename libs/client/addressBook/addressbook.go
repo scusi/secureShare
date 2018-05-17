@@ -17,13 +17,17 @@ func New(owner string) (a *Addressbook) {
 	return
 }
 
-func (a *Addressbook) AddEntry(name string) (err error) {
+func (a *Addressbook) AddEntry(name, alias string) (err error) {
 	if name == "" {
 		err = fmt.Errorf("name is empty but required")
 		return
 	}
 	id := identity.New(name)
-	id.Alias = name
+	if alias != "" {
+		id.Alias = alias
+	} else {
+		id.Alias = name
+	}
 
 	a.Entries = append(a.Entries, *id)
 	return
@@ -33,6 +37,33 @@ func (a *Addressbook) DeleteEntry(name string) {
 	for i, entry := range a.Entries {
 		if entry.Name == name {
 			a.Entries = append(a.Entries[:i], a.Entries[i+1:]...)
+		}
+	}
+	return
+}
+
+func (a *Addressbook) PubkeyByAlias(alias string) (pubKey string) {
+	for _, entry := range a.Entries {
+		if entry.Alias == alias {
+			return entry.PublicKey
+		}
+	}
+	return
+}
+
+func (a *Addressbook) PubkeyByName(name string) (pubKey string) {
+	for _, entry := range a.Entries {
+		if entry.Name == name {
+			return entry.PublicKey
+		}
+	}
+	return
+}
+
+func (a *Addressbook) NameByAlias(alias string) (name string) {
+	for _, entry := range a.Entries {
+		if entry.Alias == alias {
+			return entry.Name
 		}
 	}
 	return
