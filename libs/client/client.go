@@ -134,7 +134,7 @@ func (c *Client) Register(username, pubID string) (token string, err error) {
 		return
 	}
 	if Debug {
-		dump, _ := httputil.DumpRequestOut(req, true)
+		dump, _ := httputil.DumpRequestOut(req, false)
 		log.Printf("%s", dump)
 	}
 	resp, err := c.Do(req)
@@ -155,6 +155,8 @@ func (c *Client) Register(username, pubID string) (token string, err error) {
 // UploadFile will upload a given file for a given user on secureShare
 func (c *Client) UploadFile(recipient string, data []byte) (fileID string, err error) {
 	recipientList := strings.Split(recipient, ",")
+	log.Printf("UploadFile: recipientList: %v\n", recipientList)
+	log.Printf("UploadFile: length of data: %d\n", len(data))
 	buf := bytes.NewReader(data)
 	log.Printf("UploadFile: data = %d byte\n", len(data))
 	fieldname := "file"
@@ -207,7 +209,7 @@ func (c *Client) UploadFile(recipient string, data []byte) (fileID string, err e
 	/*
 	 */
 	if Debug {
-		dump, err := httputil.DumpRequestOut(req, true)
+		dump, err := httputil.DumpRequestOut(req, false)
 		if err != nil {
 			log.Fatal(err)
 
