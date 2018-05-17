@@ -41,6 +41,21 @@ Then your public minilock ID (encodeID) is sent to the server.
 The server issues an APIToken which is sent back to the client.
 Subsequent requests are then authenticated by username and APIToken.
 
+### Add other people to your addressbook
+
+_secureShare_ has an addressbook build in. The addressbook makes it possible 
+to use alias names - which are easier to remember instead of cryptic strings - 
+as recipient names.
+
+You can add a contact like this:
+
+```secureShare -addContact <secureShareUsername> -alias bob```
+
+Replace <secureShareUsername> with the actual username.
+A _secureShareUsername_ looks like this 
+
+ 'IWy_5D8aM-IotdWyEbDt9IvDaNP_l8HtPFP3d_TaFl0='
+
 ### List available files
 
 ```secureShare -list```
@@ -49,7 +64,7 @@ Subsequent requests are then authenticated by username and APIToken.
 
 takes a file, encrypt it and send it to a server.
 
-```secureShare -send Important.zip -recipient HZfb8HL4tL7bGJBZq2ha1oyQkf3ePTsLCBBqKog8ESz4y```
+```secureShare -send Important.zip -recipient bob```
 
 ### Receive a file 
 
