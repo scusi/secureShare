@@ -5,10 +5,9 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"github.com/dchest/blake2b"
-	"github.com/dchest/blake2s"
 	"github.com/gorilla/mux"
 	"github.com/peterbourgon/diskv"
+	"github.com/scusi/secureShare/libs/server/common"
 	"github.com/scusi/secureShare/libs/server/user"
 	"gopkg.in/yaml.v2"
 	"io"
@@ -133,29 +132,6 @@ func LookupKey(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", publicKey)
 }
 
-// GenBlake2b32 - genertes a blake2b 32 byte checksum over given data.
-// aka long ID
-func GenBlake2b32(data []byte) (c string) {
-	b := blake2b.New256()
-	b.Write(data)
-	bsum := b.Sum(nil)
-	return fmt.Sprintf("%x", bsum)
-}
-
-// generate a short file ID based on blake2s
-func GenBlake2s(data []byte) (c string, err error) {
-	hash, err := blake2s.New(&blake2s.Config{Size: 4, Person: []byte("scusi.v1")})
-	if err != nil {
-		return
-	}
-	_, err = hash.Write(data)
-	if err != nil {
-		return
-	}
-	c = fmt.Sprintf("%x", hash.Sum(nil))
-	return
-}
-
 func List(w http.ResponseWriter, r *http.Request) {
 	username := r.Header.Get("Apiusername")
 	token := r.Header.Get("Apikey")
@@ -226,12 +202,11 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 			}
 			log.Printf("copied %d byte to mime part\n", n)
 			// genFileID
-			//fileID := GenBlake2b32(inBuf.Bytes())
-			fileID, err := GenBlake2s(inBuf.Bytes())
+			fileID, err := common.ShortID(inBuf.Bytes())
 			if err != nil {
 				log.Printf("error generating checksum blake2s: %s\n", err.Error())
 				//http.Error(w, err.Error(), 500)
-				fileID = GenBlake2b32(inBuf.Bytes())
+				fileID = common.LongID(inBuf.Bytes())
 			}
 
 			// store file
