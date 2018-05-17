@@ -5,7 +5,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 )
+
+var Debug bool
+var URL string
 
 type Identity struct {
 	Alias     string // lokal alias for this identity
@@ -17,14 +21,17 @@ type Identity struct {
 func New(name string) (id *Identity) {
 	id = new(Identity)
 	id.Name = name
-	id.UpdateKey()
 	return
 }
 
-func (id *Identity) UpdateKey() (err error) {
+func (id *Identity) UpdateKey(baseURL string) (err error) {
+	if strings.HasSuffix(baseURL, "/") == false {
+		baseURL = baseURL + "/"
+	}
 	v := url.Values{}
 	v.Set("username", id.Name)
-	resp, err := http.Get("http://127.0.0.1:9999/lookupKey?" + v.Encode())
+	url := baseURL + "lookupKey?" + v.Encode()
+	resp, err := http.Get(url)
 	if err != nil {
 		return
 	}

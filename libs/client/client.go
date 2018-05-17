@@ -123,6 +123,36 @@ func (c *Client) SetHttpClient(hc *http.Client) {
 	c.httpClient = hc
 }
 
+func (c *Client) UpdateKey(username string) (pubKey string, err error) {
+	v := url.Values{}
+	v.Add("username", username)
+	req, err := http.NewRequest("GET", c.URL+"lookupKey?"+v.Encode(), nil)
+	if err != nil {
+		return
+	}
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("ERROR: Server could not answer request.\n")
+		dump, errDump := httputil.DumpResponse(resp, true)
+		if errDump != nil {
+			log.Printf("ERROR: Could not dump Response\n")
+		} else {
+			log.Printf("Response:\n%s\n", dump)
+		}
+	} else {
+		pk, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return "", err
+		}
+		return string(pk), err
+	}
+	return
+}
+
 func (c *Client) Register(username, pubID string) (token string, err error) {
 	v := url.Values{}
 	v.Add("username", username)
@@ -294,7 +324,6 @@ func (c *Client) DownloadFile(fileID string) (filename string, fileContent []byt
 		return
 	}
 	senderId, filename, content, err := minilock.DecryptFileContents(fileContent, c.Keys)
-	//senderId, filename, content, err := minilock.DecryptFileContentsWithStrings(fileContent, c.Username, c.Password)
 	if err != nil {
 		log.Printf("decryption error: '%s'\n", err.Error())
 	}

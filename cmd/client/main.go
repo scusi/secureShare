@@ -12,7 +12,6 @@ import (
 	"github.com/scusi/secureShare/libs/askpass"
 	"github.com/scusi/secureShare/libs/client"
 	"github.com/scusi/secureShare/libs/client/addressBook"
-	//"github.com/scusi/secureShare/libs/client/identity"
 	"golang.org/x/crypto/scrypt"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -125,10 +124,11 @@ func main() {
 		log.Printf("your configuration has been saved under: '%s'\n", clientConfigFile)
 
 		// create a new addressbook for the user
-		a := addressbook.New(username)
+		a := addressbook.New(username, c.URL)
 		// set owner Information
 		a.Owner.PublicKey = c.PublicKey
 		a.Owner.Alias = email
+		a.URL = c.URL
 		// marshal addressbook
 		ay, err := yaml.Marshal(a)
 		checkFatal(err)
@@ -177,9 +177,14 @@ func main() {
 	if addContact != "" {
 		// add contact
 		a.AddEntry(addContact, alias)
+		pubKey, err := c.UpdateKey(addContact)
+		checkFatal(err)
+		log.Printf("updatedPubKey: %s\n", pubKey)
+		a.AddKey(addContact, pubKey)
 		// save addressbook
 		adata, err = yaml.Marshal(&a)
 		checkFatal(err)
+		log.Printf("addrbook to save: %s\n", adata)
 		err = ioutil.WriteFile(addressbookPath, adata, 0700)
 		checkFatal(err)
 		log.Printf("contact '%s' added\n", addContact)
@@ -205,8 +210,16 @@ func main() {
 		var recipientNames []string
 		recipientList := strings.Split(recipient, ",")
 		for _, recipient := range recipientList {
+			// add recipient name to recipientNames
+			name := a.NameByAlias(recipient)
+			log.Printf("alias '%s' resolved to name: '%s'\n", recipient, name)
+			recipientNames = append(recipientNames, name)
 			// add recipient encodeID to recipientIDs
 			pubKey := a.PubkeyByAlias(recipient)
+			if pubKey == "" {
+				pubKey, err = c.UpdateKey(name)
+				log.Println(err)
+			}
 			if pubKey == "" {
 				err = fmt.Errorf("ERROR: public key for alias '%s' could not be found!\n", recipient)
 				log.Println(err)
@@ -224,10 +237,6 @@ func main() {
 			}
 			recipientKeys = append(recipientKeys, keys)
 
-			// add recipient name to recipientNames
-			name := a.NameByAlias(recipient)
-			log.Printf("alias '%s' resolved to name: '%s'\n", recipient, name)
-			recipientNames = append(recipientNames, name)
 		}
 		// check if recipientKeys at least contain one value
 		if len(recipientKeys) <= 0 {
