@@ -48,7 +48,6 @@ A _secureShareUsername_ looks like this
 takes a file, encrypt it and send it to a server.
 
 ```secureShare -send Important.zip -recipient bob```
->>>>>>> public
 
 ### Receive a file 
 
