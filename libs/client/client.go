@@ -123,6 +123,39 @@ func (c *Client) SetHttpClient(hc *http.Client) {
 	c.httpClient = hc
 }
 
+<<<<<<< HEAD
+=======
+func (c *Client) UpdateKey(username string) (pubKey string, err error) {
+	v := url.Values{}
+	v.Add("username", username)
+	req, err := http.NewRequest("GET", c.URL+"lookupKey?"+v.Encode(), nil)
+	if err != nil {
+		return
+	}
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("ERROR: Server could not answer request.\n")
+		dump, errDump := httputil.DumpResponse(resp, true)
+		if errDump != nil {
+			log.Printf("ERROR: Could not dump Response\n")
+		} else {
+			log.Printf("Response:\n%s\n", dump)
+		}
+	} else {
+		pk, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return "", err
+		}
+		return string(pk), err
+	}
+	return
+}
+
+>>>>>>> public
 func (c *Client) Register(username, pubID string) (token string, err error) {
 	v := url.Values{}
 	v.Add("username", username)
@@ -134,7 +167,11 @@ func (c *Client) Register(username, pubID string) (token string, err error) {
 		return
 	}
 	if Debug {
+<<<<<<< HEAD
 		dump, _ := httputil.DumpRequestOut(req, true)
+=======
+		dump, _ := httputil.DumpRequestOut(req, false)
+>>>>>>> public
 		log.Printf("%s", dump)
 	}
 	resp, err := c.Do(req)
@@ -155,6 +192,11 @@ func (c *Client) Register(username, pubID string) (token string, err error) {
 // UploadFile will upload a given file for a given user on secureShare
 func (c *Client) UploadFile(recipient string, data []byte) (fileID string, err error) {
 	recipientList := strings.Split(recipient, ",")
+<<<<<<< HEAD
+=======
+	log.Printf("UploadFile: recipientList: %v\n", recipientList)
+	log.Printf("UploadFile: length of data: %d\n", len(data))
+>>>>>>> public
 	buf := bytes.NewReader(data)
 	log.Printf("UploadFile: data = %d byte\n", len(data))
 	fieldname := "file"
@@ -207,7 +249,11 @@ func (c *Client) UploadFile(recipient string, data []byte) (fileID string, err e
 	/*
 	 */
 	if Debug {
+<<<<<<< HEAD
 		dump, err := httputil.DumpRequestOut(req, true)
+=======
+		dump, err := httputil.DumpRequestOut(req, false)
+>>>>>>> public
 		if err != nil {
 			log.Fatal(err)
 
@@ -292,7 +338,10 @@ func (c *Client) DownloadFile(fileID string) (filename string, fileContent []byt
 		return
 	}
 	senderId, filename, content, err := minilock.DecryptFileContents(fileContent, c.Keys)
+<<<<<<< HEAD
 	//senderId, filename, content, err := minilock.DecryptFileContentsWithStrings(fileContent, c.Username, c.Password)
+=======
+>>>>>>> public
 	if err != nil {
 		log.Printf("decryption error: '%s'\n", err.Error())
 	}
