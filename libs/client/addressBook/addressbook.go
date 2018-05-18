@@ -1,6 +1,8 @@
 package addressbook
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"github.com/scusi/secureShare/libs/client/identity"
 	"log"
@@ -35,10 +37,16 @@ func (a *Addressbook) AddEntry(name, alias string) (err error) {
 	return
 }
 
+// Delete an entry from the addressbook
 func (a *Addressbook) DeleteEntry(name string) {
 	for i, entry := range a.Entries {
 		if entry.Name == name {
-			a.Entries = append(a.Entries[:i], a.Entries[i+1:]...)
+			copy(a.Entries[i:], a.Entries[i+1:])
+			a.Entries[len(a.Entries)-1] = identity.Identity{}
+			a.Entries = a.Entries[:len(a.Entries)-1]
+			/*
+				a.Entries = append(a.Entries[:i], a.Entries[i+1:]...)
+			*/
 		}
 	}
 	return
@@ -82,4 +90,15 @@ func (a *Addressbook) AddKey(username, pubKey string) (err error) {
 		}
 	}
 	return
+}
+
+func (a *Addressbook) List() (data []byte) {
+	var outbuf bytes.Buffer
+	w := bufio.NewWriter(&outbuf)
+
+	for _, entry := range a.Entries {
+		fmt.Fprintf(w, "%s\t%s\n", entry.Name, entry.Alias)
+	}
+	w.Flush()
+	return outbuf.Bytes()
 }

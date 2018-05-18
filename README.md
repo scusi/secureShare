@@ -50,12 +50,20 @@ as recipient names.
 
 You can add a contact like this:
 
-```secureShare -addContact <secureShareUsername> -alias bob```
+```secureShare -add-contact <secureShareUsername> -alias bob```
 
 Replace <secureShareUsername> with the actual username.
 A _secureShareUsername_ looks like this 
 
  'IWy_5D8aM-IotdWyEbDt9IvDaNP_l8HtPFP3d_TaFl0='
+
+#### List contacts from your addressbook
+
+```secureShare -list-contacts```
+
+#### Delete contacts from addressbook
+
+```secureShare -delete-contact -alias bob```
 
 ### List available files
 

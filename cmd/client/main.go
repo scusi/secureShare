@@ -39,6 +39,8 @@ var err error
 var URL string
 var addContact string
 var alias string
+var contacts bool // if true, prints addressbook contacts
+var deleteContact bool
 
 func init() {
 	flag.BoolVar(&Debug, "debug", false, "enables debug output when 'true'")
@@ -57,8 +59,10 @@ func init() {
 	flag.StringVar(&fileID, "receive", "", "fileID to retrieve")
 	flag.StringVar(&recipient, "recipient", "", "recipient to send file to, comma separated")
 	flag.StringVar(&URL, "url", "https://secureshare.scusi.io/", "url of the secureShare server to use")
-	flag.StringVar(&addContact, "addContact", "", "add a secureShare user to your contacts")
+	flag.StringVar(&addContact, "add-contact", "", "add a secureShare user to your contacts")
 	flag.StringVar(&alias, "alias", "", "alias to use for addContact")
+	flag.BoolVar(&contacts, "list-contacts", false, "list your contacts from the addressbook")
+	flag.BoolVar(&deleteContact, "delete-contact", false, "removes given alias from the addressbook")
 }
 
 func checkFatal(err error) {
@@ -174,6 +178,17 @@ func main() {
 	err = yaml.Unmarshal(adata, &a)
 	checkFatal(err)
 
+	// list contacts
+	if contacts {
+		listData := a.List()
+		fmt.Println("")
+		fmt.Printf("SecureShare Username                        \tAlias\n")
+		fmt.Printf("=======================================================================\n")
+		fmt.Printf("%s", string(listData))
+		fmt.Printf("=======================================================================\n")
+		fmt.Println("")
+	}
+
 	// add contact
 	if addContact != "" {
 		// add contact
@@ -182,21 +197,31 @@ func main() {
 		checkFatal(err)
 		log.Printf("updatedPubKey: %s\n", pubKey)
 		a.AddKey(addContact, pubKey)
-		// save addressbook
-		adata, err = yaml.Marshal(&a)
-		checkFatal(err)
-		log.Printf("addrbook to save: %s\n", adata)
-		err = ioutil.WriteFile(addressbookPath, adata, 0700)
+		err = c.SaveAddressbook(a)
 		checkFatal(err)
 		log.Printf("contact '%s' added\n", addContact)
 		return
+	}
+
+	if deleteContact {
+		if alias == "" {
+			err = fmt.Errorf("ERROR: alias is empty")
+			checkFatal(err)
+		}
+		name := a.NameByAlias(alias)
+		a.DeleteEntry(name)
+		if Debug {
+			log.Printf("Addressbook after delete:\n%+v\n", a)
+		}
+		err = c.SaveAddressbook(a)
+		checkFatal(err)
 	}
 
 	// list files
 	if list {
 		fileList, err := c.List()
 		checkFatal(err)
-		fmt.Printf("%s\n", fileList)
+		fmt.Printf("%s", fileList)
 		return
 	}
 
