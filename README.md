@@ -83,6 +83,9 @@ asks server for a given fileID, downloads file, decrypts it and saves it to disk
 
 ### Server
 
+If you want you can run your own server instance, see below on how to do that.
+However you do not have to, there is a public server available at: https://secureshare.scusi.io/
+
 #### before you start the first time
 
 Before you can run the server you need to have a users file, where the serverstores information about registered users.
