@@ -14,10 +14,12 @@ Precompiled binaries for various operating systems and architectures can be foun
 
 ## Project Status
 
-This is **NOT meant for production use** (yet).
+Client and server software is fully functional.
+
+Nevertheless it is **NOT meant for production use** (yet).
 
 Currently the code is more of a proof of concept / experiment.
-Please considere it alpha stage (at best).
+Please considere it BETA stage (at best).
 It is also highly likely that some internals will be **subject to changes in the future**.
 
 ## Usage Examples
