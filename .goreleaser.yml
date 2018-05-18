@@ -55,6 +55,9 @@ archive:
   format_overrides:
   - goos: windows
     format: zip
+  files:
+          - README.md
+          - config.yml
 checksum:
   name_template: 'checksums.txt'
 snapshot:
