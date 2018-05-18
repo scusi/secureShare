@@ -222,7 +222,7 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 			}
 			if part.FormName() == "recipientList" {
 				//log.Printf("recipientList from part: %+v", part)
-				n, err := io.Copy(recListWriter, part)
+				_, err := io.Copy(recListWriter, part)
 				if err != nil {
 					log.Printf("ERROR: io.Copy recipientList: %s\n", err.Error())
 					return
@@ -234,7 +234,7 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			//log.Printf("part.FileName = '%s'\n", part.FileName())
-			n := int64(0)
+			//n := int64(0)
 			if n, err = io.Copy(inWrt, part); err != nil {
 				log.Printf("Error copy file part: %s\n", err.Error())
 				http.Error(w, err.Error(), http.StatusInternalServerError)
