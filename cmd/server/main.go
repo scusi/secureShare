@@ -15,6 +15,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -25,6 +26,7 @@ var Debug bool
 var configFile string
 var listenAddr string
 var store *diskv.Diskv
+var cfg *Config
 
 type Config struct {
 	ListenAddr string
@@ -70,7 +72,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	cfg := new(Config)
+	cfg = new(Config)
 	yaml.Unmarshal(cdata, cfg)
 	// overwrite the config listenAddr if flag is set
 	if listenAddr != "" {
@@ -146,9 +148,38 @@ func List(w http.ResponseWriter, r *http.Request) {
 	keyChan := store.KeysPrefix(username, nil)
 	for k := range keyChan {
 		//TODO: get the file time and display it
+		fi, err := getFileInfo(k)
+		if err != nil {
+			http.Error(w, "could not list files", 500)
+			log.Printf("ERROR: Could not list files for '%s': %s\n", username, err.Error())
+		}
 		k = strings.TrimPrefix(k, username+"/")
-		fmt.Fprintf(w, "'%s'\n", k)
+		fmt.Fprintf(w, "'%s  %s'\n", k, fi)
 	}
+}
+
+func getFileInfo(filename string) (fileInfo string, err error) {
+	// build filepath
+	filePath := filepath.Join(cfg.DataDir, filename)
+	// get size and creation date
+	f, err := os.Open(filePath)
+	if err != nil {
+		return
+	}
+	fi, err := f.Stat()
+	if err != nil {
+		return
+	}
+	// return size and creation date as string
+	size := fi.Size()
+	if err != nil {
+		return
+	}
+	modTime := fi.ModTime()
+	if err != nil {
+		return
+	}
+	return fmt.Sprintf("%s, %s", size, modTime), nil
 }
 
 func Upload(w http.ResponseWriter, r *http.Request) {
