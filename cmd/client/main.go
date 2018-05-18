@@ -52,12 +52,12 @@ func init() {
 		usr.HomeDir, ".config",
 		"secureshare", "client", "config.yml")
 	// configure flags
-	flag.BoolVar(&list, "list", false, "list files waiting in your secureShare box")
+	flag.BoolVar(&list, "list-files", false, "list files waiting in your secureShare box")
 	flag.BoolVar(&register, "register", false, "register at secureShare")
 	flag.StringVar(&clientConfigFile, "conf", defClientConfigFile, "client configfile to location")
 	flag.StringVar(&file, "send", "", "file to send")
 	flag.StringVar(&fileID, "receive", "", "fileID to retrieve")
-	flag.StringVar(&recipient, "recipient", "", "recipient to send file to, comma separated")
+	flag.StringVar(&recipient, "recipient", "", "alias of recipient(s) to send file to, sparate by colon if more than one recipient")
 	flag.StringVar(&URL, "url", "https://secureshare.scusi.io/", "url of the secureShare server to use")
 	flag.StringVar(&addContact, "add-contact", "", "add a secureShare user to your contacts")
 	flag.StringVar(&alias, "alias", "", "alias to use for addContact")

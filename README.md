@@ -67,7 +67,7 @@ A _secureShareUsername_ looks like this
 
 ### List available files
 
-```secureShare -list```
+```secureShare -list-files```
 
 ### Send a file
 
