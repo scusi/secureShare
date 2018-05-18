@@ -221,6 +221,7 @@ func main() {
 	if list {
 		fileList, err := c.List()
 		checkFatal(err)
+		fmt.Printf("fileID  size\t time\n")
 		fmt.Printf("%s", fileList)
 		return
 	}

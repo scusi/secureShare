@@ -154,7 +154,7 @@ func List(w http.ResponseWriter, r *http.Request) {
 			log.Printf("ERROR: Could not list files for '%s': %s\n", username, err.Error())
 		}
 		k = strings.TrimPrefix(k, username+"/")
-		fmt.Fprintf(w, "'%s  %s'\n", k, fi)
+		fmt.Fprintf(w, "'%s'  %s\n", k, fi)
 	}
 }
 
@@ -179,7 +179,7 @@ func getFileInfo(filename string) (fileInfo string, err error) {
 	if err != nil {
 		return
 	}
-	return fmt.Sprintf("%s, %s", size, modTime), nil
+	return fmt.Sprintf("%d, %s", size, modTime), nil
 }
 
 func Upload(w http.ResponseWriter, r *http.Request) {
