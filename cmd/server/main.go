@@ -95,6 +95,7 @@ func main() {
 	router.HandleFunc("/list/", List)
 	router.HandleFunc("/register/", Register)
 	router.HandleFunc("/lookupKey", LookupKey)
+	router.HandleFunc("/", Index)
 	// start server
 	if cfg.CertFile != "" && cfg.KeyFile != "" {
 		log.Printf("listenAddr: %s (TLS)\n", cfg.ListenAddr)
@@ -103,6 +104,10 @@ func main() {
 		log.Printf("listenAddr: %s\n", cfg.ListenAddr)
 		log.Fatal(http.ListenAndServe(cfg.ListenAddr, router))
 	}
+}
+
+func Index(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "https://github.com/scusi/secureShare", 301)
 }
 
 func Register(w http.ResponseWriter, r *http.Request) {
