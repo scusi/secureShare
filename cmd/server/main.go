@@ -5,26 +5,16 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-<<<<<<< HEAD
-	"github.com/dchest/blake2b"
-	"github.com/dchest/blake2s"
-	"github.com/gorilla/mux"
-	"github.com/peterbourgon/diskv"
-=======
 	"github.com/gorilla/mux"
 	"github.com/peterbourgon/diskv"
 	"github.com/scusi/secureShare/libs/server/common"
->>>>>>> public
 	"github.com/scusi/secureShare/libs/server/user"
 	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
-<<<<<<< HEAD
-=======
 	"net/http/httputil"
->>>>>>> public
 	"path/filepath"
 	"strings"
 )
@@ -99,10 +89,6 @@ func main() {
 	router.HandleFunc("/list/", List)
 	router.HandleFunc("/register/", Register)
 	router.HandleFunc("/lookupKey", LookupKey)
-<<<<<<< HEAD
-	log.Printf("listenAddr: %s\n", cfg.ListenAddr)
-	log.Fatal(http.ListenAndServe(cfg.ListenAddr, router))
-=======
 
 	if cfg.CertFile != "" && cfg.KeyFile != "" {
 		log.Printf("listenAddr: %s (TLS)\n", cfg.ListenAddr)
@@ -111,22 +97,14 @@ func main() {
 		log.Printf("listenAddr: %s\n", cfg.ListenAddr)
 		log.Fatal(http.ListenAndServe(cfg.ListenAddr, router))
 	}
->>>>>>> public
 }
 
 func Register(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Register -->")
 	username := r.FormValue("username")
-<<<<<<< HEAD
-	password := r.FormValue("password")
-	pubID := r.FormValue("pubID")
-	if Debug {
-		log.Printf("username: '%s', password: '%s', pubID: '%s'", username, password, pubID)
-=======
 	pubID := r.FormValue("pubID")
 	if Debug {
 		log.Printf("username: '%s', pubID: '%s'", username, pubID)
->>>>>>> public
 	}
 	// TODO: check if pubID is a syntactical valid minilock ID
 
@@ -154,32 +132,6 @@ func LookupKey(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", publicKey)
 }
 
-<<<<<<< HEAD
-// GenBlake2b32 - genertes a blake2b 32 byte checksum over given data.
-// aka long ID
-func GenBlake2b32(data []byte) (c string) {
-	b := blake2b.New256()
-	b.Write(data)
-	bsum := b.Sum(nil)
-	return fmt.Sprintf("%x", bsum)
-}
-
-// generate a short file ID based on blake2s
-func GenBlake2s(data []byte) (c string, err error) {
-	hash, err := blake2s.New(&blake2s.Config{Size: 4, Person: []byte("scusi.v1")})
-	if err != nil {
-		return
-	}
-	_, err = hash.Write(data)
-	if err != nil {
-		return
-	}
-	c = fmt.Sprintf("%x", hash.Sum(nil))
-	return
-}
-
-=======
->>>>>>> public
 func List(w http.ResponseWriter, r *http.Request) {
 	username := r.Header.Get("Apiusername")
 	token := r.Header.Get("Apikey")
@@ -199,8 +151,6 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
 		log.Printf("Method: POST\n")
-<<<<<<< HEAD
-=======
 		if Debug {
 			dump, errDump := httputil.DumpRequest(r, true)
 			if errDump != nil {
@@ -209,7 +159,6 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 				log.Printf("Request:\n%s\n", dump)
 			}
 		}
->>>>>>> public
 		// TODO: authenticate user
 
 		var inBuf bytes.Buffer
@@ -253,20 +202,11 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 			}
 			log.Printf("copied %d byte to mime part\n", n)
 			// genFileID
-<<<<<<< HEAD
-			//fileID := GenBlake2b32(inBuf.Bytes())
-			fileID, err := GenBlake2s(inBuf.Bytes())
-			if err != nil {
-				log.Printf("error generating checksum blake2s: %s\n", err.Error())
-				//http.Error(w, err.Error(), 500)
-				fileID = GenBlake2b32(inBuf.Bytes())
-=======
 			fileID, err := common.ShortID(inBuf.Bytes())
 			if err != nil {
 				log.Printf("error generating checksum blake2s: %s\n", err.Error())
 				//http.Error(w, err.Error(), 500)
 				fileID = common.LongID(inBuf.Bytes())
->>>>>>> public
 			}
 
 			// store file
@@ -278,15 +218,6 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			log.Printf("recipientList: %q\n", recipientList)
-<<<<<<< HEAD
-			for _, userID := range recipientList {
-				name := userDB.LookupNameByPubkey(userID)
-				if name == "" {
-					log.Printf("No user found with pubkey: '%s'\n", userID)
-					continue
-				}
-				filePath := filepath.Join(name, fileID)
-=======
 			for _, userName := range recipientList {
 				//name := userDB.LookupNameByPubkey(userID)
 				isExistent := userDB.Lookup(userName)
@@ -295,7 +226,6 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 					continue
 				}
 				filePath := filepath.Join(userName, fileID)
->>>>>>> public
 				log.Printf("filePath: %s\n", filePath)
 				err = store.Write(filePath, inBuf.Bytes())
 				if err != nil {
