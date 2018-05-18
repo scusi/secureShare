@@ -37,7 +37,7 @@ type Config struct {
 }
 
 func init() {
-	flag.BoolVar(&Debug, "debug", true, "enables debug output, when 'true'")
+	flag.BoolVar(&Debug, "debug", false, "enables debug output, when 'true'")
 	flag.StringVar(&configFile, "conf", "", "config file to use (yaml)")
 	flag.StringVar(&listenAddr, "l", "", "address to listen on, overwrites config value if set")
 }
@@ -190,9 +190,9 @@ func getFileInfo(filename string) (fileInfo string, err error) {
 func Upload(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
-		log.Printf("Method: POST\n")
+		//log.Printf("Method: POST\n")
 		if Debug {
-			dump, errDump := httputil.DumpRequest(r, true)
+			dump, errDump := httputil.DumpRequest(r, false)
 			if errDump != nil {
 				log.Printf("ERROR: COULD NOT DUMP REQUEST!")
 			} else {
@@ -221,52 +221,52 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 			if part.FormName() == "recipientList" {
-				log.Printf("recipientList from part: %+v", part)
+				//log.Printf("recipientList from part: %+v", part)
 				n, err := io.Copy(recListWriter, part)
 				if err != nil {
-					log.Printf("io.Copy error recipientList: %s\n", err.Error())
+					log.Printf("ERROR: io.Copy recipientList: %s\n", err.Error())
 					return
 				}
-				log.Printf("Copied %d byte from recList\n", n)
+				//log.Printf("Copied %d byte from recList\n", n)
 			}
 			//if part.FileName() is empty, skip this iteration.
 			if part.FileName() == "" {
 				continue
 			}
-			log.Printf("part.FileName = '%s'\n", part.FileName())
+			//log.Printf("part.FileName = '%s'\n", part.FileName())
 			n := int64(0)
 			if n, err = io.Copy(inWrt, part); err != nil {
 				log.Printf("Error copy file part: %s\n", err.Error())
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			log.Printf("copied %d byte to mime part\n", n)
+			//log.Printf("copied %d byte to mime part\n", n)
 			// genFileID
 			fileID, err := common.ShortID(inBuf.Bytes())
 			if err != nil {
-				log.Printf("error generating checksum blake2s: %s\n", err.Error())
+				log.Printf("ERROR generating checksum blake2s: %s\n", err.Error())
 				//http.Error(w, err.Error(), 500)
 				fileID = common.LongID(inBuf.Bytes())
 			}
 
 			// store file
-			log.Printf("recList: %s\n", string(recList.Bytes()))
+			//log.Printf("recList: %s\n", string(recList.Bytes()))
 			recipientList := strings.Split(string(recList.Bytes()), "\n")
 			for i, r := range recipientList {
 				if r == "" {
 					recipientList = append(recipientList[:i], recipientList[i+1:]...)
 				}
 			}
-			log.Printf("recipientList: %q\n", recipientList)
+			//log.Printf("recipientList: %q\n", recipientList)
 			for _, userName := range recipientList {
 				//name := userDB.LookupNameByPubkey(userID)
 				isExistent := userDB.Lookup(userName)
 				if isExistent == false {
-					log.Printf("No user found with username: '%s'\n", userName)
+					log.Printf("ERROR: No user found with username: '%s'\n", userName)
 					continue
 				}
 				filePath := filepath.Join(userName, fileID)
-				log.Printf("filePath: %s\n", filePath)
+				//log.Printf("filePath: %s\n", filePath)
 				err = store.Write(filePath, inBuf.Bytes())
 				if err != nil {
 					log.Println(err)
@@ -294,21 +294,21 @@ func Download(w http.ResponseWriter, r *http.Request) {
 	filePath := strings.Join([]string{userID, fileID}, "/")
 	data, err := store.Read(filePath)
 	if err != nil {
-		log.Printf("download error: %s\n", err.Error())
+		log.Printf("ERROR downloading '%s': %s\n", fileID, err.Error())
 		http.Error(w, "file not found", 404)
 		return
 	}
 	w.Header().Set("Content-Disposition", "attachment; filename=\""+fileID+"\"")
 	n, err := w.Write(data)
 	if err != nil {
-		log.Printf("error writing data to client")
+		log.Printf("ERROR writing data to client '%s'\n", r.RemoteAddr)
 		http.Error(w, err.Error(), 500)
 		return
 	}
 	log.Printf("written %d byte to client\n", n)
 	err = store.Erase(filePath)
 	if err != nil {
-		log.Printf("error erase file after download")
+		log.Printf("ERROR erase file after download")
 		http.Error(w, err.Error(), 500)
 		return
 	}
