@@ -1,12 +1,6 @@
 package identity
 
-import (
-	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
-	"strings"
-)
+import ()
 
 var Debug bool
 var URL string
