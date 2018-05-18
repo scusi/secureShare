@@ -34,6 +34,12 @@ Then your public minilock ID (encodeID) is sent to the server.
 The server issues an APIToken which is sent back to the client.
 Subsequent requests are then authenticated by username and APIToken.
 
+In order to use your own (test) server use the '-url' flag.
+
+```secureShare -url http://127.0.0.1:9999/ -register```
+
+Above command would register at the secureShareServer on given localhost interface.
+
 ### Add other people to your addressbook
 
 *This is currently subject to changes, see [Issue#1](https://github.com/scusi/secureShare/issues/1)*
@@ -115,19 +121,20 @@ usersfile: "users.yml"
 ### Secure by Design
 
 _secureShare_ is based on minilock encryption.
-Files are encrypted before sent to the server, encryption keys never leav the local machine.
+Files are encrypted before sent to the server, encryption keys never leave the local machine.
 
 ### Send once, reach many
 
 _secureShare_ supports sending the same file to multiple users.
 
-### ZeroKnowledge 
+### nearly ZeroKnowledge
 
 The _secureShareSever_ has as little information about the client and the content beeing transfereed as possible.
 
 The server never has access to the content beeing transfered, since it is encrypted end-to-end useing minilock.
-The server does not know the user, all the server knows is the public minilock-EncodeID of users that gets files send.
 The server does not even see the filename, since it is alos protected by minilock encryption.
+
+The server does not know the user, all the server knows is the public minilock-EncodeID of users.
 
 ### beeing certain about the sender
 
