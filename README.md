@@ -2,7 +2,17 @@
 
 a system to share files securely.
 
-## Status
+The system consists of a server and a client sofware written in [golang](golang.org).
+The server is basically just a store and forward instance, 
+that stores encrypted files and forwards them to the receiving user.
+
+The client is a commandline tool that allows easily to send files encrypted to someone else (who also uses secureShare).
+
+## Releases
+
+Precompiled binaries for various operating systems and architectures can be found unter [releases](https://github.com/scusi/secureShare/releases/)
+
+## Project Status
 
 This is **NOT meant for production use** (yet).
 
@@ -25,6 +35,8 @@ The server issues an APIToken which is sent back to the client.
 Subsequent requests are then authenticated by username and APIToken.
 
 ### Add other people to your addressbook
+
+*This is currently subject to changes, see [Issue#1](https://github.com/scusi/secureShare/issues/1)*
 
 _secureShare_ has an addressbook build in. The addressbook makes it possible 
 to use alias names - which are easier to remember instead of cryptic strings - 
@@ -97,10 +109,6 @@ usersfile: "users.yml"
 * datadir:	is the path to the directory where uploaded data is stored
 		The data directory will be created if not existing and filesystem permissions allow so.
 * usersfile:	is the path to the yaml encoded file that holds information about the users.
-
-## Releases
-
-Precompiled binaries for various operating systems and architectures can be found unter [releases](https://github.com/scusi/secureShare/releases/)
 
 ## Design Principles
 
