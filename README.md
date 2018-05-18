@@ -7,7 +7,7 @@ a system to share files securely.
 ### Secure by Design
 
 _secureShare_ is based on minilock encryption.
-Files are ancrypted before sent to the server, encryption keys never leav the local machine.
+Files are ancrypted before sent to the server, encryption keys never leave the local machine.
 
 ### Send once, reach many
 
@@ -15,11 +15,11 @@ _secureShare_ supports sending the same file to multiple users.
 
 ### ZeroKnowledge 
 
-The _secureShareSever_ has as little information about the client and the content beeing transfereed as possible.
+The _secureShareSever_ has as little information about the client and the content beeing transfered as possible.
 
 The server never has access to the content beeing transfered, since it is encrypted end-to-end useing minilock.
 The server does not know the user, all the server knows is the public minilock-EncodeID of users that gets files send.
-The server does not even see the filename, since it is alos protected by minilock encryption.
+The server does not even see the filename, since it is also protected by minilock encryption.
 
 ### beeing certain about the sender
 
