@@ -3,10 +3,7 @@ package main
 
 import (
 	"crypto/rand"
-<<<<<<< HEAD
-=======
 	"crypto/tls"
->>>>>>> public
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -15,10 +12,6 @@ import (
 	"github.com/scusi/secureShare/libs/askpass"
 	"github.com/scusi/secureShare/libs/client"
 	"github.com/scusi/secureShare/libs/client/addressBook"
-<<<<<<< HEAD
-	//"github.com/scusi/secureShare/libs/client/identity"
-=======
->>>>>>> public
 	"golang.org/x/crypto/scrypt"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -33,10 +26,7 @@ import (
 var defClientConfigFile string
 var clientConfigFile string
 
-<<<<<<< HEAD
-=======
 var skipVerify bool
->>>>>>> public
 var Debug bool
 var list bool
 var register bool
@@ -45,11 +35,7 @@ var fileID string
 var recipient string
 var usr *user.User
 var err error
-<<<<<<< HEAD
 
-func init() {
-	flag.BoolVar(&Debug, "debug", false, "enables debug output when 'true'")
-=======
 var URL string
 var addContact string
 var alias string
@@ -57,7 +43,6 @@ var alias string
 func init() {
 	flag.BoolVar(&Debug, "debug", false, "enables debug output when 'true'")
 	flag.BoolVar(&skipVerify, "InsecureSkipVerify", false, "turn off TLS certificate checks - INSECURE")
->>>>>>> public
 	// get user home dir
 	usr, err = user.Current()
 	checkFatal(err)
@@ -71,12 +56,9 @@ func init() {
 	flag.StringVar(&file, "send", "", "file to send")
 	flag.StringVar(&fileID, "receive", "", "fileID to retrieve")
 	flag.StringVar(&recipient, "recipient", "", "recipient to send file to, comma separated")
-<<<<<<< HEAD
-=======
 	flag.StringVar(&URL, "url", "http://127.0.0.1:9999/", "url of the secureShare server to use")
 	flag.StringVar(&addContact, "addContact", "", "add a secureShare user to your contacts")
 	flag.StringVar(&alias, "alias", "", "alias to use for addContact")
->>>>>>> public
 }
 
 func checkFatal(err error) {
@@ -110,12 +92,6 @@ func main() {
 		c, err := client.New(
 			client.SetUsername(username),
 			client.SetKeys(keys),
-<<<<<<< HEAD
-			//client.SetAPIToken(token),
-		)
-		checkFatal(err)
-		// WIP - change register function
-=======
 			client.SetURL(URL),
 			//client.SetAPIToken(token),
 		)
@@ -127,7 +103,6 @@ func main() {
 			insecureSkipVerify := &http.Client{Transport: tr}
 			c.SetHttpClient(insecureSkipVerify)
 		}
->>>>>>> public
 		// TODO: what do we do against exhausting attacks and similar
 		//       somehow we need to make it ...
 		token, err := c.Register(username, pubID)
@@ -148,11 +123,6 @@ func main() {
 		err = ioutil.WriteFile(clientConfigFile, cy, 0700)
 		checkFatal(err)
 		log.Printf("your configuration has been saved under: '%s'\n", clientConfigFile)
-<<<<<<< HEAD
-		a := addressbook.New(username)
-		ay, err := yaml.Marshal(a)
-		checkFatal(err)
-=======
 
 		// create a new addressbook for the user
 		a := addressbook.New(username, c.URL)
@@ -164,15 +134,11 @@ func main() {
 		ay, err := yaml.Marshal(a)
 		checkFatal(err)
 		// prepare to write to file
->>>>>>> public
 		addressbookPath := filepath.Join(usr.HomeDir, ".config", "secureshare", "client", username)
 		err = os.MkdirAll(addressbookPath, 0700)
 		checkFatal(err)
 		addressbookPath = filepath.Join(addressbookPath, "addressbook.yml")
-<<<<<<< HEAD
-=======
 		// write to file on disk
->>>>>>> public
 		err = ioutil.WriteFile(addressbookPath, ay, 0700)
 		checkFatal(err)
 		return
@@ -184,12 +150,6 @@ func main() {
 	checkFatal(err)
 	err = yaml.Unmarshal(data, &c)
 	checkFatal(err)
-<<<<<<< HEAD
-	c.SetHttpClient(new(http.Client))
-	if Debug {
-		fmt.Printf("client: %+v\n", c)
-	}
-=======
 	// skip certificate checks is skipVerify is set true
 	if skipVerify {
 		tr := &http.Transport{
@@ -232,7 +192,6 @@ func main() {
 		return
 	}
 
->>>>>>> public
 	// list files
 	if list {
 		fileList, err := c.List()
@@ -244,12 +203,6 @@ func main() {
 	// read file
 	if file != "" {
 		// prepare recipient keys
-<<<<<<< HEAD
-		var recipientKeys []*taber.Keys
-		recipientList := strings.Split(recipient, ",")
-		for _, recipient := range recipientList {
-			keys, err := taber.FromID(recipient)
-=======
 		// TODO: this part needs to change when the addressbook is used
 		// recipients are then aliases from the addressbook.
 		// for each alias the publicKey needs to be looked up
@@ -279,21 +232,17 @@ func main() {
 
 			// add recipient key to recipientKeys
 			keys, err := taber.FromID(pubKey)
->>>>>>> public
 			if err != nil {
 				log.Printf("Error generating recipient key for '%s'\n", recipient)
 				continue
 			}
 			recipientKeys = append(recipientKeys, keys)
-<<<<<<< HEAD
-=======
 
 		}
 		// check if recipientKeys at least contain one value
 		if len(recipientKeys) <= 0 {
 			err = fmt.Errorf("ERORR: no recipient keys could be found, aborting\n")
 			checkFatal(err)
->>>>>>> public
 		}
 		// encrypt file
 		data, err := ioutil.ReadFile(file)
@@ -302,12 +251,6 @@ func main() {
 		checkFatal(err)
 		log.Printf("read %d byte from file '%s'\n", len(data), file)
 		// upload a file
-<<<<<<< HEAD
-		fileID, err = c.UploadFile(recipient, encryptedContent)
-		checkFatal(err)
-		log.Printf("file was uploaded for '%s' with fileID is: '%s'\n", recipient, fileID)
-
-=======
 		recipientNamesString := strings.Join(recipientNames, ",")
 		recipientNamesString = strings.TrimSuffix(recipientNamesString, ",")
 		if Debug {
@@ -316,7 +259,6 @@ func main() {
 		fileID, err = c.UploadFile(recipientNamesString, encryptedContent)
 		checkFatal(err)
 		log.Printf("file was uploaded for user '%s' with fileID: '%s'\n", recipient, fileID)
->>>>>>> public
 		return
 	}
 
@@ -325,11 +267,8 @@ func main() {
 		if err != nil {
 			checkFatal(err)
 		}
-<<<<<<< HEAD
-=======
 		// make sure filename contains no path
 		filename = filepath.Base(filename)
->>>>>>> public
 		err = ioutil.WriteFile(filename, data, 0700)
 		checkFatal(err)
 		log.Printf("fileID '%s' written to '%s'\n", fileID, filename)
