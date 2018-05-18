@@ -21,7 +21,7 @@ import (
 	"strings"
 )
 
-const defaultURL = "http://127.0.0.1:9999/"
+const defaultURL = "https://securehare.scusi.io/"
 
 var Debug bool
 

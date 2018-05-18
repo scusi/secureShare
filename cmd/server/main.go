@@ -37,7 +37,7 @@ type Config struct {
 func init() {
 	flag.BoolVar(&Debug, "debug", true, "enables debug output, when 'true'")
 	flag.StringVar(&configFile, "conf", "", "config file to use (yaml)")
-	flag.StringVar(&listenAddr, "l", "127.0.0.1:9999", "address to listen on, default is: 127.0.0.1:9999")
+	flag.StringVar(&listenAddr, "l", "", "address to listen on, overwrites config value if set")
 }
 
 func AdvancedTransformExample(key string) *diskv.PathKey {
@@ -65,13 +65,17 @@ func InverseTransformExample(pathKey *diskv.PathKey) (key string) {
 
 func main() {
 	flag.Parse()
-	// read config
+	// read and parse config
 	cdata, err := ioutil.ReadFile(configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 	cfg := new(Config)
 	yaml.Unmarshal(cdata, cfg)
+	// overwrite the config listenAddr if flag is set
+	if listenAddr != "" {
+		cfg.ListenAddr = listenAddr
+	}
 	userDB, err = user.LoadFromFile(cfg.UsersFile)
 	if err != nil {
 		log.Fatal(err)
@@ -82,14 +86,14 @@ func main() {
 		AdvancedTransform: AdvancedTransformExample,
 		InverseTransform:  InverseTransformExample,
 	})
-
+	// initialize http router
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/{UserID}/{FileID}", Download)
 	router.HandleFunc("/upload/", Upload)
 	router.HandleFunc("/list/", List)
 	router.HandleFunc("/register/", Register)
 	router.HandleFunc("/lookupKey", LookupKey)
-
+	// start server
 	if cfg.CertFile != "" && cfg.KeyFile != "" {
 		log.Printf("listenAddr: %s (TLS)\n", cfg.ListenAddr)
 		log.Fatal(http.ListenAndServeTLS(cfg.ListenAddr, cfg.CertFile, cfg.KeyFile, router))

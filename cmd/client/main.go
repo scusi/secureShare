@@ -56,7 +56,7 @@ func init() {
 	flag.StringVar(&file, "send", "", "file to send")
 	flag.StringVar(&fileID, "receive", "", "fileID to retrieve")
 	flag.StringVar(&recipient, "recipient", "", "recipient to send file to, comma separated")
-	flag.StringVar(&URL, "url", "http://127.0.0.1:9999/", "url of the secureShare server to use")
+	flag.StringVar(&URL, "url", "https://secureshare.scusi.io/", "url of the secureShare server to use")
 	flag.StringVar(&addContact, "addContact", "", "add a secureShare user to your contacts")
 	flag.StringVar(&alias, "alias", "", "alias to use for addContact")
 }
