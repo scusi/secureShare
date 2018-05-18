@@ -26,13 +26,13 @@ const defaultURL = "https://securehare.scusi.io/"
 var Debug bool
 
 type Client struct {
-	PublicKey  string
-	Keys       *taber.Keys
-	Salt       []byte
-	Username   string
-	APIToken   string
-	URL        string
-	httpClient *http.Client
+	PublicKey  string       // encodeID of the user
+	Keys       *taber.Keys  // minilock Keys
+	Salt       []byte       // salt used to scrypt the encodeID
+	Username   string       // scryped user encodeID
+	APIToken   string       // sessionID for API requests
+	URL        string       // URL of the API
+	httpClient *http.Client // http.Client to talk to the API
 }
 
 func (c *Client) Do(r *http.Request) (resp *http.Response, err error) {
