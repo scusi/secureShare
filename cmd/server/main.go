@@ -235,7 +235,7 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 			}
 			//log.Printf("part.FileName = '%s'\n", part.FileName())
 			//n := int64(0)
-			if n, err = io.Copy(inWrt, part); err != nil {
+			if _, err = io.Copy(inWrt, part); err != nil {
 				log.Printf("Error copy file part: %s\n", err.Error())
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
