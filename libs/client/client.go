@@ -10,6 +10,7 @@ import (
 	"github.com/cathalgarvey/go-minilock"
 	"github.com/cathalgarvey/go-minilock/taber"
 	"golang.org/x/crypto/scrypt"
+	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"log"
@@ -18,7 +19,11 @@ import (
 	"net/http/httputil"
 	"net/textproto"
 	"net/url"
+	"os/user"
+	"path/filepath"
 	"strings"
+
+	"github.com/scusi/secureShare/libs/client/addressBook"
 )
 
 const defaultURL = "https://securehare.scusi.io/"
@@ -329,4 +334,28 @@ func (c *Client) DownloadFile(fileID string) (filename string, fileContent []byt
 	}
 	log.Printf("SenderID was: %s\n", senderId)
 	return filename, content, err
+}
+
+func (c *Client) SaveAddressbook(a *addressbook.Addressbook) (err error) {
+	// save addressbook
+	// get user home dir
+	usr, err := user.Current()
+	if err != nil {
+		return
+	}
+
+	addressbookPath := filepath.Join(usr.HomeDir, ".config", "secureshare", "client", c.Username)
+	addressbookPath = filepath.Join(addressbookPath, "addressbook.yml")
+	adata, err := yaml.Marshal(&a)
+	if err != nil {
+		return
+	}
+	if Debug {
+		log.Printf("addrbook to save: %s\n", adata)
+	}
+	err = ioutil.WriteFile(addressbookPath, adata, 0700)
+	if err != nil {
+		return
+	}
+	return
 }
