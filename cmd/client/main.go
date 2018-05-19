@@ -15,6 +15,7 @@ import (
 	"github.com/scusi/secureShare/libs/client/askpass"
 	"golang.org/x/crypto/scrypt"
 	"gopkg.in/yaml.v2"
+	"h12.me/socks"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -44,8 +45,10 @@ var contacts bool // if true, prints addressbook contacts
 var deleteContact bool
 var saltHex string // submit salt to register process
 var showUsername bool
+var toraddr string
 
 func init() {
+	flag.StringVar(&toraddr, "socksproxy", "", "set a socks proxy (e.g. tor) to be used to connect to the server")
 	flag.BoolVar(&Debug, "debug", false, "enables debug output when 'true'")
 	flag.BoolVar(&skipVerify, "InsecureSkipVerify", false, "turn off TLS certificate checks (DO NOT USE unless you know what you do)")
 	// get user home dir
@@ -183,7 +186,15 @@ func main() {
 		insecureSkipVerify := &http.Client{Transport: tr}
 		c.SetHttpClient(insecureSkipVerify)
 	} else {
-		c.SetHttpClient(new(http.Client))
+		tr := &http.Transport{}
+		c.SetHttpClient(&http.Client{Transport: tr})
+	}
+
+	// if toraddr is configured, use it.
+	if toraddr != "" {
+		dialSocksProxy := socks.DialSocksProxy(socks.SOCKS5, toraddr)
+		tr := &http.Transport{Dial: dialSocksProxy}
+		c.SetHttpClient(&http.Client{Transport: tr})
 	}
 
 	if Debug {
