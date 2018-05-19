@@ -180,7 +180,7 @@ func main() {
 	err = yaml.Unmarshal(adata, &a)
 	checkFatal(err)
 
-	// list contacts
+	// list contacts from addressbook
 	if contacts {
 		listData := a.List()
 		fmt.Println("")
@@ -191,7 +191,7 @@ func main() {
 		fmt.Println("")
 	}
 
-	// add contact
+	// add contact	to addressbook
 	if addContact != "" {
 		// add contact
 		a.AddEntry(addContact, alias)
@@ -205,6 +205,7 @@ func main() {
 		return
 	}
 
+	// delete contact from addressbook
 	if deleteContact {
 		if alias == "" {
 			err = fmt.Errorf("ERROR: alias is empty")
@@ -219,7 +220,7 @@ func main() {
 		checkFatal(err)
 	}
 
-	// list files
+	// list files from my secureShare account
 	if list {
 		fileList, err := c.List()
 		checkFatal(err)
@@ -228,7 +229,7 @@ func main() {
 		return
 	}
 
-	// read file
+	// send a file via secureShare to another user
 	if file != "" {
 		// prepare recipient keys
 		// TODO: this part needs to change when the addressbook is used
@@ -290,6 +291,7 @@ func main() {
 		return
 	}
 
+	// receive a file by it's fileID
 	if fileID != "" {
 		filename, data, err := c.DownloadFile(fileID)
 		if err != nil {
