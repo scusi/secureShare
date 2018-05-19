@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"github.com/cathalgarvey/go-minilock"
@@ -41,10 +42,12 @@ var addContact string
 var alias string
 var contacts bool // if true, prints addressbook contacts
 var deleteContact bool
+var saltHex string // submit salt to register process
+var showUsername bool
 
 func init() {
 	flag.BoolVar(&Debug, "debug", false, "enables debug output when 'true'")
-	flag.BoolVar(&skipVerify, "InsecureSkipVerify", false, "turn off TLS certificate checks - INSECURE")
+	flag.BoolVar(&skipVerify, "InsecureSkipVerify", false, "turn off TLS certificate checks (DO NOT USE unless you know what you do)")
 	// get user home dir
 	usr, err = user.Current()
 	checkFatal(err)
@@ -63,6 +66,8 @@ func init() {
 	flag.StringVar(&alias, "alias", "", "alias to use for addContact")
 	flag.BoolVar(&contacts, "list-contacts", false, "list your contacts from the addressbook")
 	flag.BoolVar(&deleteContact, "delete-contact", false, "removes given alias from the addressbook")
+	flag.StringVar(&saltHex, "salt", "", "provide the salt value to the register process (DO NOT USE unless you know what you do)")
+	flag.BoolVar(&showUsername, "show-user", false, "prints your secureShare Username")
 }
 
 func checkFatal(err error) {
@@ -86,8 +91,18 @@ func main() {
 		pubID, err := keys.EncodeID()
 		checkFatal(err)
 		// scrypt pubID to get username for server
-		salt := make([]byte, 16)
-		rand.Read(salt)
+		var salt []byte
+		if saltHex == "" {
+			salt = make([]byte, 16)
+			rand.Read(salt)
+		} else {
+			// if a salt is provided on the commandline, use it!
+			salt, err = hex.DecodeString(saltHex)
+			checkFatal(err)
+			if len(salt) <= 15 {
+				log.Printf("WARNING: provided salt is to small")
+			}
+		}
 		dk, err := scrypt.Key([]byte(pubID), salt, 1<<15, 8, 1, 32)
 		if err != nil {
 			log.Fatal(err)
@@ -156,6 +171,10 @@ func main() {
 	checkFatal(err)
 	err = yaml.Unmarshal(data, &c)
 	checkFatal(err)
+	if showUsername {
+		fmt.Printf("Your secureShareUsername is: '%s'\n", c.Username)
+		return
+	}
 	// skip certificate checks is skipVerify is set true
 	if skipVerify {
 		tr := &http.Transport{
