@@ -127,7 +127,9 @@ func main() {
 		err = ioutil.WriteFile(clientConfigFile, cy, 0700)
 		checkFatal(err)
 		log.Printf("your configuration has been saved under: '%s'\n", clientConfigFile)
-
+		// copy config.yml to default config file location
+		err = os.Symlink(clientConfigFile, defClientConfigFile)
+		checkFatal(err)
 		// create a new addressbook for the user
 		a := addressbook.New(username, c.URL)
 		// set owner Information
