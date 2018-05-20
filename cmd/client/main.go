@@ -125,6 +125,13 @@ func main() {
 			insecureSkipVerify := &http.Client{Transport: tr}
 			c.SetHttpClient(insecureSkipVerify)
 		}
+
+		if toraddr != "" {
+			dialSocksProxy := socks.DialSocksProxy(socks.SOCKS5, toraddr)
+			tr := &http.Transport{Dial: dialSocksProxy}
+			c.SetHttpClient(&http.Client{Transport: tr})
+
+		}
 		// TODO: what do we do against exhausting attacks and similar
 		//       somehow we need to make it ...
 		token, err := c.Register(username, pubID)
@@ -132,6 +139,7 @@ func main() {
 		c.APIToken = token
 
 		c.PublicKey = pubID
+		c.Socksproxy = toraddr
 		cy, err := yaml.Marshal(c)
 		checkFatal(err)
 		// make sure that the path exists
@@ -191,8 +199,8 @@ func main() {
 	}
 
 	// if toraddr is configured, use it.
-	if toraddr != "" {
-		dialSocksProxy := socks.DialSocksProxy(socks.SOCKS5, toraddr)
+	if c.Socksproxy != "" {
+		dialSocksProxy := socks.DialSocksProxy(socks.SOCKS5, c.Socksproxy)
 		tr := &http.Transport{Dial: dialSocksProxy}
 		c.SetHttpClient(&http.Client{Transport: tr})
 	}

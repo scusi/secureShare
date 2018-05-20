@@ -11,6 +11,7 @@ import (
 	"github.com/cathalgarvey/go-minilock/taber"
 	"golang.org/x/crypto/scrypt"
 	"gopkg.in/yaml.v2"
+	"h12.me/socks"
 	"io"
 	"io/ioutil"
 	"log"
@@ -37,6 +38,7 @@ type Client struct {
 	Username   string       // scryped user encodeID
 	APIToken   string       // sessionID for API requests
 	URL        string       // URL of the API
+	Socksproxy string       // socks5 proxy to connect to server
 	httpClient *http.Client // http.Client to talk to the API
 }
 
@@ -65,6 +67,17 @@ func SetURL(url string) OptionFunc {
 		} else {
 			client.URL = url + "/"
 		}
+		return nil
+	}
+}
+
+func SetSocksproxy(sproxy string) OptionFunc {
+	return func(client *Client) error {
+		if sproxy == "" {
+			err := fmt.Errorf("provided socksproxy is empty\n")
+			return err
+		}
+		client.Socksproxy = sproxy
 		return nil
 	}
 }
@@ -112,7 +125,13 @@ func New(options ...OptionFunc) (c *Client, err error) {
 		return nil, err
 	}
 	c.Salt = salt
-	c.httpClient = new(http.Client)
+	if c.Socksproxy != "" {
+		dialSocksProxy := socks.DialSocksProxy(socks.SOCKS5, c.Socksproxy)
+		tr := &http.Transport{Dial: dialSocksProxy}
+		c.httpClient = &http.Client{Transport: tr}
+	} else {
+		c.httpClient = new(http.Client)
+	}
 	return c, nil
 }
 
