@@ -135,6 +135,7 @@ func New(options ...OptionFunc) (c *Client, err error) {
 	return c, nil
 }
 
+// ID - returns the clientID / secureShareUsername
 func (c *Client) ID() (id string) {
 	dk, err := scrypt.Key([]byte(c.PublicKey), c.Salt, 1<<15, 8, 1, 32)
 	if err != nil {
@@ -143,10 +144,12 @@ func (c *Client) ID() (id string) {
 	return base64.URLEncoding.EncodeToString(dk)
 }
 
+// sets the http.Client to be used for requests to secureShareServer
 func (c *Client) SetHttpClient(hc *http.Client) {
 	c.httpClient = hc
 }
 
+// UpdateKey - asks the secureShareServer for the actual key of a given user
 func (c *Client) UpdateKey(username string) (pubKey string, err error) {
 	v := url.Values{}
 	v.Add("username", username)
@@ -177,6 +180,7 @@ func (c *Client) UpdateKey(username string) (pubKey string, err error) {
 	return
 }
 
+// Register - register a new user at the secureShareServer
 func (c *Client) Register(username, pubID string) (token string, err error) {
 	v := url.Values{}
 	v.Add("username", username)
@@ -203,6 +207,8 @@ func (c *Client) Register(username, pubID string) (token string, err error) {
 	if err != nil {
 		return
 	}
+	// TODO: Server should encrypt token with the clients minilock key,
+	//       Client has then to decrypt the token here.
 	return fmt.Sprintf("%s", body), nil
 }
 

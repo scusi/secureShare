@@ -130,6 +130,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token := userDB.APIToken(username)
+	// TODO: encrypt token with client key
 	fmt.Fprintf(w, "%s", token)
 	return
 }
