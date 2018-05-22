@@ -1,6 +1,7 @@
 package common
 
 import (
+	"bytes"
 	"crypto/rand"
 	"fmt"
 	"github.com/dchest/blake2b"
@@ -30,32 +31,51 @@ func ShortID(data []byte) (c string, err error) {
 	return
 }
 
+// NewUserID - generates a new (random) userID, which is integrity protected
+// by a 1 byte blake2s checksum
 func NewUserID() (encodedUID string, err error) {
+	// generate 128 byte of random data
 	uidData := make([]byte, 128)
 	rand.Read(uidData)
-	hash, err := blake2s.New(&blake2s.Config{Size: 6, Person: []byte("ssUser.v1")})
+	uid, err := shortChecksum(uidData, 6)
 	if err != nil {
 		return
 	}
-	_, err = hash.Write(uidData)
+	cs, err := shortChecksum(uid, 1)
 	if err != nil {
 		return
 	}
-	//uid := fmt.Sprintf("%x", hash.Sum(nil))
-	uid := hash.Sum(nil)
+	uid = append(uid, cs[0])
 	encodedUID = base58.Encode(uid)
-	uidChecksum, err := blake2s.New(&blake2s.Config{Size: 1, Person: []byte("ssUCheck")})
-	encodedUID = encodedUID + fmt.Sprintf("%x", uidChecksum)
 	return
 }
 
+// VerifyUserID - checks if a userID is syntactical valid
 func VerifyUserID(encodedUID string) (ok bool, err error) {
-	extractedChecksum := encodedUID[len(encodedUID)-1:]
-	checksum, err := blake2s.New(&blake2s.Config{Size: 1, Person: []byte("ssUCheck")})
-	checksumA := fmt.Sprintf("%x", checksum)
-	if checksumA != extractedChecksum {
-		err = fmt.Errorf("Checksum is not correct. '%s' vs. '%s'\n", extractedChecksum, checksumA)
-		return false, err
+	// extract the userID checksum from the UID string
+	decodedUID := base58.Decode(encodedUID)
+	uid := decodedUID[:6]
+	cs := decodedUID[6:]
+	myCs, err := shortChecksum(uid, 1)
+	if bytes.Equal(myCs, cs) {
+		return true, nil
+	} else {
+		err = fmt.Errorf("Checksum check failed")
+		return
 	}
-	return true, nil
+}
+
+// shortChecksum - generates a short blake2s checksum
+func shortChecksum(data []byte, size uint8) (cs []byte, err error) {
+	checksum, err := blake2s.New(&blake2s.Config{Size: size, Person: []byte("ssUCheck")})
+	if err != nil {
+		return
+	}
+	_, err = checksum.Write(data)
+	if err != nil {
+		return
+	}
+	cs = checksum.Sum(nil)
+	return
+
 }
