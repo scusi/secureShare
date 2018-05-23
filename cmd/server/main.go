@@ -110,6 +110,15 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "https://github.com/scusi/secureShare", 301)
 }
 
+/*
+// Register should be reworked to:
+
+- generate a username with common.NewUserID()
+- check if that username is already taken
+- add new user to the user database
+- return username and APIToken
+
+*/
 func Register(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Register -->")
 	username := r.FormValue("username")
