@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"github.com/cathalgarvey/go-minilock"
+	"github.com/cathalgarvey/go-minilock/taber"
 	"github.com/gorilla/mux"
 	"github.com/peterbourgon/diskv"
 	"github.com/scusi/secureShare/libs/server/common"
@@ -27,6 +29,7 @@ var listenAddr string
 var store *diskv.Diskv
 var cfg *config.Config
 var err error
+var keys *taber.Keys
 
 func init() {
 	flag.BoolVar(&Debug, "debug", false, "enables debug output, when 'true'")
@@ -57,21 +60,27 @@ func InverseTransformExample(pathKey *diskv.PathKey) (key string) {
 
 }
 
+func checkFatal(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func main() {
 	flag.Parse()
 	// read and parse config
 	cfg, err = config.ReadFromFile(configFile)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkFatal(err)
 	// overwrite the config listenAddr if flag is set
 	if listenAddr != "" {
 		cfg.ListenAddr = listenAddr
 	}
+	// generate server keypair
+	keys, err = minilock.GenerateKey(cfg.Email, cfg.Password)
+	checkFatal(err)
+
 	userDB, err = user.LoadFromFile(cfg.UsersFile)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkFatal(err)
 	// init file storage
 	store = diskv.New(diskv.Options{
 		BasePath:          cfg.DataDir,
