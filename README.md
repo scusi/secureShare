@@ -92,6 +92,8 @@ However you do not have to, there is a public server available at:
 
 Which is also already in the client as a default server.
 
+In addition there is a hidden onion service at `http://kh5wc54so72nj5dy.onion/`
+
 #### before you start the first time
 
 Before you can run the server you need to have a users file, where the serverstores information about registered users.

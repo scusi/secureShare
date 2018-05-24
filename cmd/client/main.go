@@ -155,7 +155,10 @@ func main() {
 		log.Printf("your configuration has been saved under: '%s'\n", clientConfigFile)
 		// copy config.yml to default config file location
 		err = os.Symlink(clientConfigFile, defClientConfigFile)
-		checkFatal(err)
+		//checkFatal(err)
+		if err != nil {
+			log.Printf("WARNING: %s\n", err.Error())
+		}
 		// create a new addressbook for the user
 		a := addressbook.New(username, c.URL)
 		// set owner Information

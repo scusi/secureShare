@@ -8,10 +8,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/peterbourgon/diskv"
 	"github.com/scusi/secureShare/libs/server/common"
+	"github.com/scusi/secureShare/libs/server/config"
 	"github.com/scusi/secureShare/libs/server/user"
-	"gopkg.in/yaml.v2"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -26,15 +25,8 @@ var Debug bool
 var configFile string
 var listenAddr string
 var store *diskv.Diskv
-var cfg *Config
-
-type Config struct {
-	ListenAddr string
-	CertFile   string
-	KeyFile    string
-	DataDir    string
-	UsersFile  string
-}
+var cfg *config.Config
+var err error
 
 func init() {
 	flag.BoolVar(&Debug, "debug", false, "enables debug output, when 'true'")
@@ -68,12 +60,10 @@ func InverseTransformExample(pathKey *diskv.PathKey) (key string) {
 func main() {
 	flag.Parse()
 	// read and parse config
-	cdata, err := ioutil.ReadFile(configFile)
+	cfg, err = config.ReadFromFile(configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
-	cfg = new(Config)
-	yaml.Unmarshal(cdata, cfg)
 	// overwrite the config listenAddr if flag is set
 	if listenAddr != "" {
 		cfg.ListenAddr = listenAddr
