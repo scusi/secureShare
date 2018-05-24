@@ -13,6 +13,7 @@ import (
 	"github.com/scusi/secureShare/libs/client"
 	"github.com/scusi/secureShare/libs/client/addressBook"
 	"github.com/scusi/secureShare/libs/client/askpass"
+	//"github.com/scusi/secureShare/libs/message"
 	"golang.org/x/crypto/scrypt"
 	"gopkg.in/yaml.v2"
 	"h12.me/socks"
@@ -134,8 +135,9 @@ func main() {
 		}
 		// TODO: what do we do against exhausting attacks and similar
 		//       somehow we need to make it ...
-		token, err := c.Register(username, pubID)
+		username, token, err := c.Register(username, pubID)
 		checkFatal(err)
+		c.Username = username
 		c.APIToken = token
 
 		c.PublicKey = pubID

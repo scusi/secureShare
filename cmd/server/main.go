@@ -3,15 +3,19 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/rand"
 	"flag"
 	"fmt"
 	"github.com/cathalgarvey/go-minilock"
 	"github.com/cathalgarvey/go-minilock/taber"
+	"github.com/decred/base58"
 	"github.com/gorilla/mux"
 	"github.com/peterbourgon/diskv"
+	"github.com/scusi/secureShare/libs/message"
 	"github.com/scusi/secureShare/libs/server/common"
 	"github.com/scusi/secureShare/libs/server/config"
 	"github.com/scusi/secureShare/libs/server/user"
+	"gopkg.in/yaml.v2"
 	"io"
 	"log"
 	"net/http"
@@ -76,8 +80,27 @@ func main() {
 		cfg.ListenAddr = listenAddr
 	}
 	// generate server keypair
+	if cfg.Email == "" {
+		err := fmt.Errorf("Email field from config are empty.")
+		checkFatal(err)
+	}
+	if cfg.Password == "" {
+		// if password is empty create one and save it to config
+		pwdSeed := make([]byte, 96)
+		_, err = rand.Read(pwdSeed)
+		checkFatal(err)
+		// generate some password with a hash function from seed
+		cfg.Password = base58.Encode(pwdSeed)
+		log.Printf("generated Password for you: '%s'\n", cfg.Password)
+		err = config.WriteToFile(configFile, cfg)
+		checkFatal(err)
+		log.Printf("config saved to '%s'\n", configFile)
+	}
 	keys, err = minilock.GenerateKey(cfg.Email, cfg.Password)
 	checkFatal(err)
+	encodeID, err := keys.EncodeID()
+	checkFatal(err)
+	log.Printf("server public key is: '%s'\n", encodeID)
 
 	userDB, err = user.LoadFromFile(cfg.UsersFile)
 	checkFatal(err)
@@ -126,6 +149,11 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		log.Printf("username: '%s', pubID: '%s'", username, pubID)
 	}
 	// TODO: check if pubID is a syntactical valid minilock ID
+	username, err = common.NewUserID()
+	if err != nil {
+		http.Error(w, "creating user ID failed", 500)
+		return
+	}
 
 	if userDB.Lookup(username) {
 		http.Error(w, "User already existing", 500)
@@ -138,8 +166,23 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token := userDB.APIToken(username)
-	// TODO: encrypt token with client key
-	fmt.Fprintf(w, "%s", token)
+	//fmt.Fprintf(w, "%s", token)
+	registerResp := &message.RegisterResponse{
+		Username: username,
+		APIToken: token,
+	}
+	y, err := yaml.Marshal(registerResp)
+	if err != nil {
+		http.Error(w, "marshaling response failed", 500)
+		return
+	}
+	// TODO: encrypt register response with client public key
+	n, err := w.Write(y)
+	if err != nil {
+		http.Error(w, "writing response failed", 500)
+		return
+	}
+	log.Printf("Register: wrote %d byte to %s\n", n, r.RemoteAddr)
 	return
 }
 

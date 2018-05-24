@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/scusi/secureShare/libs/client/addressBook"
+	"github.com/scusi/secureShare/libs/message"
 )
 
 const defaultURL = "https://securehare.scusi.io/"
@@ -181,7 +182,7 @@ func (c *Client) UpdateKey(username string) (pubKey string, err error) {
 }
 
 // Register - register a new user at the secureShareServer
-func (c *Client) Register(username, pubID string) (token string, err error) {
+func (c *Client) Register(username, pubID string) (user, token string, err error) {
 	v := url.Values{}
 	v.Add("username", username)
 	v.Add("pubID", pubID)
@@ -209,7 +210,13 @@ func (c *Client) Register(username, pubID string) (token string, err error) {
 	}
 	// TODO: Server should encrypt token with the clients minilock key,
 	//       Client has then to decrypt the token here.
-	return fmt.Sprintf("%s", body), nil
+	registerResp := new(message.RegisterResponse)
+	err = yaml.Unmarshal(body, registerResp)
+	if err != nil {
+		return
+	}
+	return registerResp.Username, registerResp.APIToken, nil
+	//return fmt.Sprintf("%s", body), nil
 }
 
 // UploadFile will upload a given file for a given user on secureShare

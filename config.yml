@@ -1,5 +1,7 @@
-listenaddr: "127.0.0.1:9999"
-certfile: "cert.pem"
-keyfile: "key.pem"
-datadir: "data"
-usersfile: "users.yml"
+listenaddr: 127.0.0.1:9999
+certfile: "" 
+keyfile: ""
+datadir: data
+usersfile: users.yml
+email: server@scusi.io
+password: 4oVTvksLeA4yWsL8vJNtCK69NuuU4uxWjHGhBMcymJrTdsmPSzmErkz3MJEAnsGmNpwUaBMrDzJzTxatYaCipox66GpyWTs5WLxoRzp7JnJxL2AHiruSwYV3cjW1YMnhkUR
