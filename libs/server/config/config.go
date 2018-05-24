@@ -36,8 +36,7 @@ func ReadFromFile(filename string) (cfg *Config, err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	cfg = new(Config)
-	err = yaml.Unmarshal(cdata, cfg)
+	cfg, err = Unmarshal(cdata)
 	if err != nil {
 		return
 	}
@@ -45,7 +44,7 @@ func ReadFromFile(filename string) (cfg *Config, err error) {
 }
 
 func WriteToFile(filename string, cfg *Config) (err error) {
-	y, err := yaml.Marshal(cfg)
+	y, err := Marshal(cfg)
 	if err != nil {
 		return
 	}
@@ -53,5 +52,16 @@ func WriteToFile(filename string, cfg *Config) (err error) {
 	if err != nil {
 		return
 	}
+	return
+}
+
+func Marshal(cfg *Config) (yamlData []byte, err error) {
+	yamlData, err = yaml.Marshal(cfg)
+	return
+}
+
+func Unmarshal(yamlData []byte) (cfg *Config, err error) {
+	cfg = new(Config)
+	err = yaml.Unmarshal(yamlData, cfg)
 	return
 }
