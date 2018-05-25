@@ -57,7 +57,7 @@ You can add a contact like this:
 Replace <secureShareUsername> with the actual username.
 A _secureShareUsername_ looks like this 
 
- 'IWy_5D8aM-IotdWyEbDt9IvDaNP_l8HtPFP3d_TaFl0='
+ '9HLbFep9WP'
 
 #### List contacts from your addressbook
 
