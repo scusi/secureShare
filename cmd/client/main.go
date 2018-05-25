@@ -49,6 +49,7 @@ var deleteContact bool
 var saltHex string // submit salt to register process
 var showUsername bool
 var toraddr string
+var outFile string // file to write output, overrides original filename
 
 func init() {
 	flag.StringVar(&toraddr, "socksproxy", "", "set a socks proxy (e.g. tor) to be used to connect to the server")
@@ -76,6 +77,7 @@ func init() {
 	flag.BoolVar(&showUsername, "show-user", false, "prints your secureShare Username")
 	flag.BoolVar(&registerNewMachine, "register-new-host", false, "registers a new machine with a given userID")
 	flag.BoolVar(&unregisterMachine, "unregister-host", false, "invalidates the machine access, deletes local config")
+	flag.StringVar(&outFile, "o", "", "write to this filename")
 }
 
 func checkFatal(err error) {
@@ -362,9 +364,12 @@ func main() {
 		if err != nil {
 			checkFatal(err)
 		}
-		// make sure filename contains no path
-		filename = filepath.Base(filename)
-		err = ioutil.WriteFile(filename, data, 0700)
+		// if outFile is empty, use original filename
+		if outFile == "" {
+			// make sure filename contains no path
+			outFile = filepath.Base(filename)
+		}
+		err = ioutil.WriteFile(outFile, data, 0700)
 		checkFatal(err)
 		log.Printf("fileID '%s' written to '%s'\n", fileID, filename)
 	}
