@@ -10,10 +10,16 @@ import (
 
 var Debug bool
 
+type Machine struct {
+	ID    string
+	Token string
+}
+
 type User struct {
-	Name      string // username choosen by the user
-	APIToken  string // server issued token to authenticate to the secureShare API
-	PublicKey string // minilock EncodeID of the user
+	Name      string    // username choosen by the user
+	APIToken  string    // server issued token to authenticate to the secureShare API
+	PublicKey string    // minilock EncodeID of the user
+	Machines  []Machine // list of user authorized machines/hosts
 }
 
 type UserDB struct {
