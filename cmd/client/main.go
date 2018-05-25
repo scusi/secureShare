@@ -159,10 +159,12 @@ func main() {
 		}
 		// TODO: what do we do against exhausting attacks and similar
 		//       somehow we need to make it ...
-		username, token, err := c.Register(pubID)
+		username, token, mID, mToken, err := c.Register(pubID)
 		checkFatal(err)
 		c.Username = username
 		c.APIToken = token
+		c.MachineID = mID
+		c.MachineToken = mToken
 
 		c.PublicKey = pubID
 		c.Socksproxy = toraddr
