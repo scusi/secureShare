@@ -33,6 +33,8 @@ var skipVerify bool
 var Debug bool
 var list bool
 var register bool
+var registerNewMachine bool
+var unregisterMachine bool
 var file string
 var fileID string
 var recipient string
@@ -72,6 +74,8 @@ func init() {
 	flag.BoolVar(&deleteContact, "delete-contact", false, "removes given alias from the addressbook")
 	flag.StringVar(&saltHex, "salt", "", "provide the salt value to the register process (DO NOT USE unless you know what you do)")
 	flag.BoolVar(&showUsername, "show-user", false, "prints your secureShare Username")
+	flag.BoolVar(&registerNewMachine, "register-new-host", false, "registers a new machine with a given userID")
+	flag.BoolVar(&unregisterMachine, "unregister-host", false, "invalidates the machine access, deletes local config")
 }
 
 func checkFatal(err error) {
@@ -86,6 +90,24 @@ func main() {
 	if Debug {
 		client.Debug = true
 	}
+
+	if registerNewMachine {
+		// ask minilock credentials
+		// generate minilock keys
+		// prepare a registerMachineRequest
+		// encrypt this request to the server
+		// send request to the server
+		// server does decrypt requests.
+		// server checks if requesting userID is also the senderID,
+		//  if so it does provide the client with APIToken
+		// client generates and saves config
+	}
+	if unregisterMachine {
+		// delete local config
+		// delete APIToken for that machine OR force a new APIToken onto the account.
+		// delete APIToken for that machine OR force a new APIToken onto the account.
+	}
+
 	// register
 	if register {
 		// ask user for minilock credentials
@@ -135,7 +157,7 @@ func main() {
 		}
 		// TODO: what do we do against exhausting attacks and similar
 		//       somehow we need to make it ...
-		username, token, err := c.Register(username, pubID)
+		username, token, err := c.Register(pubID)
 		checkFatal(err)
 		c.Username = username
 		c.APIToken = token

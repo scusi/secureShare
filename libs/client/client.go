@@ -37,6 +37,7 @@ type Client struct {
 	Keys       *taber.Keys  // minilock Keys
 	Salt       []byte       // salt used to scrypt the encodeID
 	Username   string       // scryped user encodeID
+	MachineID  string       // UUID for the local machine
 	APIToken   string       // sessionID for API requests
 	URL        string       // URL of the API
 	Socksproxy string       // socks5 proxy to connect to server
@@ -182,9 +183,8 @@ func (c *Client) UpdateKey(username string) (pubKey string, err error) {
 }
 
 // Register - register a new user at the secureShareServer
-func (c *Client) Register(username, pubID string) (user, token string, err error) {
+func (c *Client) Register(pubID string) (user, token string, err error) {
 	v := url.Values{}
-	v.Add("username", username)
 	v.Add("pubID", pubID)
 	// does not work
 	//req, err := http.NewRequest("POST", c.URL+"register", strings.NewReader(v.Encode()))
@@ -204,19 +204,36 @@ func (c *Client) Register(username, pubID string) (user, token string, err error
 		dump, _ := httputil.DumpResponse(resp, true)
 		log.Printf("%s", dump)
 	}
+	if resp.StatusCode != 200 {
+		log.Printf("status code (%d) is NOT OK\n", resp.StatusCode)
+		body, readErr := ioutil.ReadAll(resp.Body)
+		if readErr != nil {
+			return "", "", readErr
+		}
+		log.Printf("Server error: '%s'\n", body)
+		err = fmt.Errorf("Server error: '%s'\n", body)
+		return
+	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return
 	}
-	// TODO: Server should encrypt token with the clients minilock key,
-	//       Client has then to decrypt the token here.
+	// decrypt and parse response
 	registerResp := new(message.RegisterResponse)
-	err = yaml.Unmarshal(body, registerResp)
+	// decrypt body
+	senderID, _, rr, err := minilock.DecryptFileContents(body, c.Keys)
 	if err != nil {
 		return
 	}
+	// TODO: check if senderID is the serverID
+	log.Printf("register response senderID: '%s'\n", senderID)
+	// unmarshal decrypted register response
+	err = yaml.Unmarshal(rr, registerResp)
+	if err != nil {
+		return
+	}
+	// return to client
 	return registerResp.Username, registerResp.APIToken, nil
-	//return fmt.Sprintf("%s", body), nil
 }
 
 // UploadFile will upload a given file for a given user on secureShare

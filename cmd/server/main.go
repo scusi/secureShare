@@ -132,41 +132,44 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "https://github.com/scusi/secureShare", 301)
 }
 
+// RegisterHost
 /*
-// Register should be reworked to:
-
-- generate a username with common.NewUserID()
-- check if that username is already taken
-- add new user to the user database
-- return username and APIToken
-
+should make it possible to use an existing account from a machine where no local config is available
 */
+func RegisterHost() {
+	//
+}
+
+// Register - registers a new key, creates a user and returns the new userID and the APIToken
+// to the registering client
 func Register(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Register -->")
-	username := r.FormValue("username")
 	pubID := r.FormValue("pubID")
 	if Debug {
-		log.Printf("username: '%s', pubID: '%s'", username, pubID)
+		log.Printf("got register request for pubID: '%s'", pubID)
 	}
 	// TODO: check if pubID is a syntactical valid minilock ID
-	username, err = common.NewUserID()
+	username, err := common.NewUserID()
 	if err != nil {
+		log.Printf("ERROR: creating userID failed: '%s'\n", err)
 		http.Error(w, "creating user ID failed", 500)
 		return
 	}
 	// check if userID already exists
 	if userDB.Lookup(username) {
+		log.Printf("ERROR: User '%s' already exists.\n", username)
 		http.Error(w, "User already existing", 500)
 		return
 	}
 	// check if there are other accounts with the same public key
 	if userDB.LookupNameByPubkey(pubID) != "" {
+		log.Printf("ERROR: another user with the same key (%s) already exists.\n", pubID)
 		http.Error(w, "Another user with the same key already exists", 500)
 		return
 	}
 
 	log.Printf("going to add new user '%s' with pubID '%s'\n", username, pubID)
-	err := userDB.Add(username, pubID)
+	err = userDB.Add(username, pubID)
 	if err != nil {
 		http.Error(w, "adding user failed", 500)
 		return
@@ -182,8 +185,19 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "marshaling response failed", 500)
 		return
 	}
-	// TODO: encrypt register response with client public key
-	n, err := w.Write(y)
+	// encrypt register response with client public key
+	rkeys, err := taber.FromID(pubID)
+	if err != nil {
+		http.Error(w, "generate recipient keys from encodeID failed", 500)
+		return
+	}
+	cy, err := minilock.EncryptFileContents("RegisterResponse", y, keys, rkeys)
+	if err != nil {
+		http.Error(w, "encrypting RegisterResponse failed", 500)
+		return
+	}
+	// write response to the client
+	n, err := w.Write(cy)
 	if err != nil {
 		http.Error(w, "writing response failed", 500)
 		return
