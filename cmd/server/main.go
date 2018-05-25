@@ -154,11 +154,17 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "creating user ID failed", 500)
 		return
 	}
-
+	// check if userID already exists
 	if userDB.Lookup(username) {
 		http.Error(w, "User already existing", 500)
 		return
 	}
+	// check if there are other accounts with the same public key
+	if userDB.LookupNameByPubkey(pubID) != "" {
+		http.Error(w, "Another user with the same key already exists", 500)
+		return
+	}
+
 	log.Printf("going to add new user '%s' with pubID '%s'\n", username, pubID)
 	err := userDB.Add(username, pubID)
 	if err != nil {
