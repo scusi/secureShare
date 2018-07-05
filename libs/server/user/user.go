@@ -15,11 +15,14 @@ type Machine struct {
 	Token string
 }
 
+//type Machines map[string]string
+
 type User struct {
 	Name      string    // username choosen by the user
 	APIToken  string    // server issued token to authenticate to the secureShare API
 	PublicKey string    // minilock EncodeID of the user
 	Machines  []Machine // list of user authorized machines/hosts
+	//Machines Machines
 }
 
 type UserDB struct {
@@ -104,6 +107,9 @@ func (udb *UserDB) Save(path string) (err error) {
 
 func (udb *UserDB) AddMachine(username, machineID string) (machineToken string, err error) {
 	var found = false
+	/* if val, ok := Machine[machineID]; ok {
+		// machine already exists
+	} */
 	m := &Machine{ID: machineID, Token: newAPIToken()}
 	nudb := UserDB{}
 	nudb = *udb
@@ -200,7 +206,7 @@ func (udb *UserDB) APIAuthenticate(username, APIToken string) (ok bool) {
 	return false
 }
 
-func (udb *UserDB) MachineAuth(userID, mID, mToken) (ok bool) {
+func (udb *UserDB) MachineAuth(userID, mID, mToken string) (ok bool) {
 	for _, u := range udb.Users {
 		if u.Name == userID {
 			for _, m := range u.Machines {
