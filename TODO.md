@@ -1,7 +1,7 @@
 - [DONE] server does not need a 'cleartext' username, pubID should do.
   exchange username with pubID on the server side
 - [DONE] client should not store password or (if) just bcrypted
-- [WIP] add addressbook so you can send files to contacts without need to lookup the corresponding minilock ID manually.
+- [DONE] add addressbook so you can send files to contacts without need to lookup the corresponding minilock ID manually.
 - add a function to unregister / delete account to client and server
 - add a function to get a new APIToken on client and server side
 - add a go routine that deletes old files
