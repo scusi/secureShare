@@ -31,6 +31,7 @@ var Debug bool
 var configFile string
 var listenAddr string
 var fileStore *diskv.Diskv
+var clientStore *diskv.Diskv
 var cfg *config.Config
 var err error
 var keys *taber.Keys
@@ -110,9 +111,15 @@ func main() {
 		AdvancedTransform: AdvancedTransformExample,
 		InverseTransform:  InverseTransformExample,
 	})
+	clientStore = diskv.New(diskv.Options{
+		BasePath:          "clientData",
+		AdvancedTransform: AdvancedTransformExample,
+		InverseTransform:  InverseTransformExample,
+	})
 	// initialize http router
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/{UserID}/{FileID}", Download)
+	router.HandleFunc("/config/{UserID}", ConfigHandler).Name("ConfigHandler")
 	router.HandleFunc("/upload/", Upload)
 	router.HandleFunc("/list/", List)
 	router.HandleFunc("/register/", Register)
