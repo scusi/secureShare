@@ -152,8 +152,10 @@ func RegisterHost() {
 func Register(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Register -->")
 	pubID := r.FormValue("pubID")
+	machineID := r.FormValue("MachineID")
+	// TODO: validate machineID
 	if Debug {
-		log.Printf("got register request for pubID: '%s'", pubID)
+		log.Printf("got register request from '%s' for pubID: '%s'", machineID, pubID)
 	}
 	// TODO: check if pubID is a syntactical valid minilock ID
 	username, err := common.NewUserID()
@@ -181,11 +183,19 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "adding user failed", 500)
 		return
 	}
+	machineToken, err := userDB.AddMachine(username, machineID)
+	if err != nil {
+		http.Error(w, "adding machine failed", 500)
+		return
+	}
+
 	token := userDB.APIToken(username)
 	//fmt.Fprintf(w, "%s", token)
 	registerResp := &message.RegisterResponse{
-		Username: username,
-		APIToken: token,
+		Username:     username,
+		APIToken:     token,
+		MachineID:    machineID,
+		MachineToken: machineToken,
 	}
 	y, err := yaml.Marshal(registerResp)
 	if err != nil {

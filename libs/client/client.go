@@ -6,9 +6,11 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"github.com/cathalgarvey/go-minilock"
 	"github.com/cathalgarvey/go-minilock/taber"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/scrypt"
 	"gopkg.in/yaml.v2"
 	"h12.me/socks"
@@ -33,15 +35,16 @@ const defaultURL = "https://securehare.scusi.io/"
 var Debug bool
 
 type Client struct {
-	PublicKey  string       // encodeID of the user
-	Keys       *taber.Keys  // minilock Keys
-	Salt       []byte       // salt used to scrypt the encodeID
-	Username   string       // scryped user encodeID
-	MachineID  string       // UUID for the local machine
-	APIToken   string       // sessionID for API requests
-	URL        string       // URL of the API
-	Socksproxy string       // socks5 proxy to connect to server
-	httpClient *http.Client // http.Client to talk to the API
+	PublicKey    string       // encodeID of the user
+	Keys         *taber.Keys  // minilock Keys
+	Salt         []byte       // salt used to scrypt the encodeID
+	Username     string       // scryped user encodeID
+	MachineID    string       // UUID for the local machine
+	MachineToken string       // auth token for this machine
+	APIToken     string       // sessionID for API requests
+	URL          string       // URL of the API
+	Socksproxy   string       // socks5 proxy to connect to server
+	httpClient   *http.Client // http.Client to talk to the API
 }
 
 func (c *Client) Do(r *http.Request) (resp *http.Response, err error) {
@@ -115,6 +118,16 @@ func SetAPIToken(token string) OptionFunc {
 
 func New(options ...OptionFunc) (c *Client, err error) {
 	c = new(Client)
+	if uuid.SetNodeID(uuid.NodeID()) != true {
+		err = fmt.Errorf("Could not set nodeID")
+		return
+	}
+	u, err := uuid.NewUUID()
+	if err != nil {
+		err = fmt.Errorf("Could not create new UUID")
+		return
+	}
+	c.MachineID = hex.EncodeToString(u.NodeID())
 	c.URL = defaultURL
 	for _, option := range options {
 		if err := option(c); err != nil {
@@ -183,9 +196,10 @@ func (c *Client) UpdateKey(username string) (pubKey string, err error) {
 }
 
 // Register - register a new user at the secureShareServer
-func (c *Client) Register(pubID string) (user, token string, err error) {
+func (c *Client) Register(pubID string) (user, token, mID, mToken string, err error) {
 	v := url.Values{}
 	v.Add("pubID", pubID)
+	v.Add("MachineID", c.MachineID)
 	// does not work
 	//req, err := http.NewRequest("POST", c.URL+"register", strings.NewReader(v.Encode()))
 	req, err := http.NewRequest("GET", c.URL+"register?"+v.Encode(), nil)
@@ -208,7 +222,7 @@ func (c *Client) Register(pubID string) (user, token string, err error) {
 		log.Printf("status code (%d) is NOT OK\n", resp.StatusCode)
 		body, readErr := ioutil.ReadAll(resp.Body)
 		if readErr != nil {
-			return "", "", readErr
+			return "", "", "", "", readErr
 		}
 		log.Printf("Server error: '%s'\n", body)
 		err = fmt.Errorf("Server error: '%s'\n", body)
@@ -233,7 +247,8 @@ func (c *Client) Register(pubID string) (user, token string, err error) {
 		return
 	}
 	// return to client
-	return registerResp.Username, registerResp.APIToken, nil
+	return registerResp.Username, registerResp.APIToken,
+		registerResp.MachineID, registerResp.MachineToken, nil
 }
 
 // UploadFile will upload a given file for a given user on secureShare

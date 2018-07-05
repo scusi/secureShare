@@ -102,6 +102,25 @@ func (udb *UserDB) Save(path string) (err error) {
 	return
 }
 
+func (udb *UserDB) AddMachine(username, machineID string) (machineToken string, err error) {
+	var found = false
+	m := &Machine{ID: machineID, Token: newAPIToken()}
+	nudb := UserDB{}
+	nudb = *udb
+	for i, u := range nudb.Users {
+		if u.Name == username {
+			found = true
+			udb.Users[i].Machines = append(udb.Users[i].Machines, *m)
+			//return
+		}
+	}
+	if found != true {
+		err = fmt.Errorf("user was not found")
+	}
+	udb.Save("")
+	return m.Token, nil
+}
+
 func (udb *UserDB) Add(username, publicKey string) (err error) {
 	if Debug {
 		log.Printf("userDB.Add: username: '%s'", username)
@@ -173,10 +192,25 @@ func (udb *UserDB) PublicKey(username string) (publicKey string) {
 func (udb *UserDB) APIAuthenticate(username, APIToken string) (ok bool) {
 	for _, u := range udb.Users {
 		if u.Name == username {
-			APIToken = u.APIToken
-			return true
+			if APIToken == u.APIToken {
+				return true
+			}
 		}
 	}
+	return false
+}
+
+func (udb *UserDB) MachineAuth(userID, mID, mToken) (ok bool) {
+	for _, u := range udb.Users {
+		if u.Name == userID {
+			for _, m := range u.Machines {
+				if m.ID == mID {
+					return true
+				}
+			}
+		}
+	}
+	log.Printf("Machine Authentication for '%s@%s' with token '%' failed\n", userID, mID, mToken)
 	return false
 }
 
