@@ -30,7 +30,7 @@ var userDB *user.UserDB
 var Debug bool
 var configFile string
 var listenAddr string
-var store *diskv.Diskv
+var fileStore *diskv.Diskv
 var cfg *config.Config
 var err error
 var keys *taber.Keys
@@ -105,7 +105,7 @@ func main() {
 	userDB, err = user.LoadFromFile(cfg.UsersFile)
 	checkFatal(err)
 	// init file storage
-	store = diskv.New(diskv.Options{
+	fileStore = diskv.New(diskv.Options{
 		BasePath:          cfg.DataDir,
 		AdvancedTransform: AdvancedTransformExample,
 		InverseTransform:  InverseTransformExample,
@@ -222,7 +222,7 @@ func List(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", 401)
 		return
 	}
-	keyChan := store.KeysPrefix(username, nil)
+	keyChan := fileStore.KeysPrefix(username, nil)
 	for k := range keyChan {
 		//TODO: get the file time and display it
 		fi, err := getFileInfo(k)
@@ -321,7 +321,7 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 				fileID = common.LongID(inBuf.Bytes())
 			}
 
-			// store file
+			// fileStore file
 			//log.Printf("recList: %s\n", string(recList.Bytes()))
 			recipientList := strings.Split(string(recList.Bytes()), "\n")
 			for i, r := range recipientList {
@@ -339,7 +339,7 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 				}
 				filePath := filepath.Join(userName, fileID)
 				//log.Printf("filePath: %s\n", filePath)
-				err = store.Write(filePath, inBuf.Bytes())
+				err = fileStore.Write(filePath, inBuf.Bytes())
 				if err != nil {
 					log.Println(err)
 				}
@@ -364,7 +364,7 @@ func Download(w http.ResponseWriter, r *http.Request) {
 	userID := vars["UserID"]
 	fileID := vars["FileID"]
 	filePath := strings.Join([]string{userID, fileID}, "/")
-	data, err := store.Read(filePath)
+	data, err := fileStore.Read(filePath)
 	if err != nil {
 		log.Printf("ERROR downloading '%s': %s\n", fileID, err.Error())
 		http.Error(w, "file not found", 404)
@@ -378,7 +378,7 @@ func Download(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("written %d byte to client\n", n)
-	err = store.Erase(filePath)
+	err = fileStore.Erase(filePath)
 	if err != nil {
 		log.Printf("ERROR erase file after download")
 		http.Error(w, err.Error(), 500)
