@@ -273,6 +273,8 @@ func getFileInfo(filename string) (fileInfo string, err error) {
 	if err != nil {
 		return
 	}
+	// TODO: make size human readable with bytesize
+	// TODO: format time as a shorter string
 	return fmt.Sprintf("%d, %s", size, modTime), nil
 }
 
@@ -380,6 +382,11 @@ func Download(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["UserID"]
 	fileID := vars["FileID"]
+	// make sure a user can only download his/her own files
+	if userID != username {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
 	filePath := strings.Join([]string{userID, fileID}, "/")
 	data, err := fileStore.Read(filePath)
 	if err != nil {
