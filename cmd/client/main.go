@@ -50,6 +50,7 @@ var saltHex string // submit salt to register process
 var showUsername bool
 var toraddr string
 var outFile string // file to write output, overrides original filename
+var restore string // userid to restore
 
 func init() {
 	flag.StringVar(&toraddr, "socksproxy", "", "set a socks proxy (e.g. tor) to be used to connect to the server")
@@ -78,6 +79,7 @@ func init() {
 	flag.BoolVar(&registerNewMachine, "register-new-host", false, "registers a new machine with a given userID")
 	flag.BoolVar(&unregisterMachine, "unregister-host", false, "invalidates the machine access, deletes local config")
 	flag.StringVar(&outFile, "o", "", "write to this filename")
+	flag.StringVar(&restore, "restore", "", "userID to restore locally")
 }
 
 func checkFatal(err error) {
@@ -108,6 +110,23 @@ func main() {
 		// delete local config
 		// delete APIToken for that machine OR force a new APIToken onto the account.
 		// delete APIToken for that machine OR force a new APIToken onto the account.
+	}
+	if restore != "" {
+		// load config from server
+		// ask user for minilock credentials
+		email, password := askpass.Credentials()
+		keys, err := minilock.GenerateKey(email, password)
+		checkFatal(err)
+		//pubID, err := keys.EncodeID()
+		//checkFatal(err)
+		c, err := client.New(
+			client.SetUsername(restore),
+			client.SetURL(URL),
+			client.SetKeys(keys))
+		err = c.GetConfigOnServer()
+		checkFatal(err)
+		log.Printf("Client: %+v\n", c)
+		return
 	}
 
 	// register
@@ -170,6 +189,9 @@ func main() {
 		c.Socksproxy = toraddr
 		cy, err := yaml.Marshal(c)
 		checkFatal(err)
+		// save the config on the server
+		err = c.SaveConfigOnServer()
+		checkFatal(err)
 		// make sure that the path exists
 		clientConfigFile = filepath.Join(
 			usr.HomeDir, ".config",
@@ -213,6 +235,7 @@ func main() {
 	checkFatal(err)
 	err = yaml.Unmarshal(data, &c)
 	checkFatal(err)
+
 	if showUsername {
 		fmt.Printf("Your secureShareUsername is: '%s'\n", c.Username)
 		return

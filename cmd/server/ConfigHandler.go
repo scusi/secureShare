@@ -1,31 +1,34 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"github.com/gorilla/mux"
-	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"path/filepath"
-	"strings"
+	//"strings"
 )
 
 func ConfigHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("entering ConfigHandler...\n")
+	/* We can not authenticate because we have no ApiKey on the client yet.
 	username := r.Header.Get("Apiusername")
 	token := r.Header.Get("Apikey")
 	if userDB.APIAuthenticate(username, token) != true {
 		http.Error(w, "Unauthorized", 401)
 		return
 	}
+	*/
 	vars := mux.Vars(r)
 	userID := vars["UserID"]
 
 	switch r.Method {
 	case "GET":
+		log.Printf("ConfigHandler GET\n")
 		// send config to client aka download
-		filePath := strings.Join([]string{userID, "config"}, "/")
-		data, err := fileStore.Read(filePath)
+		//filePath := strings.Join([]string{userID, "config"}, "/")
+		filePath := filepath.Join(userID, "config")
+		data, err := clientStore.Read(filePath)
 		if err != nil {
 			log.Printf("ERROR downloading '%s': %s\n", filePath, err.Error())
 			http.Error(w, "file not found", 404)
@@ -41,34 +44,18 @@ func ConfigHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("written %d byte to client\n", n)
 		return
 	case "POST":
+		log.Printf("ConfigHandler POST\n")
 		// retrieve config from client and store aka upload
-		var inBuf bytes.Buffer
-		inWrt := bufio.NewWriter(&inBuf)
-		reader, err := r.MultipartReader()
+		bodyBytes, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), 500)
 			return
 		}
-		for {
-			part, err := reader.NextPart()
-			if err == io.EOF {
-				break
-			}
-			if part.FileName() == "" {
-				continue
-			}
-			if _, err = io.Copy(inWrt, part); err != nil {
-				log.Printf("Error copy file part: %s\n", err.Error())
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			filePath := filepath.Join(userID, "config")
-			err = clientStore.Write(filePath, inBuf.Bytes())
-			if err != nil {
-				log.Println(err)
-			}
+		filePath := filepath.Join(userID, "config")
+		err = clientStore.Write(filePath, bodyBytes)
+		if err != nil {
+			log.Println(err)
 		}
-		return
 	}
 	return
 }

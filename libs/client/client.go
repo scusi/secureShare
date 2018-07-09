@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/cathalgarvey/go-minilock"
 	"github.com/cathalgarvey/go-minilock/taber"
@@ -191,6 +192,107 @@ func (c *Client) UpdateKey(username string) (pubKey string, err error) {
 			return "", err
 		}
 		return string(pk), err
+	}
+	return
+}
+
+func (c *Client) SaveConfigOnServer() (err error) {
+	// marshal client
+	clientBytes, err := json.Marshal(c)
+	if err != nil {
+		return
+	}
+	// encrypt clientBytes
+	// TODO: minilock.EncryptFileContents()
+	// create save request
+	bodyReader := bytes.NewReader(clientBytes)
+	urlString := c.URL + "config/" + c.Username
+	req, err := http.NewRequest("POST", urlString, bodyReader)
+	if err != nil {
+		return
+	}
+	if Debug {
+		dump, _ := httputil.DumpRequestOut(req, false)
+		log.Printf("%s", dump)
+	}
+	// send request
+	resp, err := c.Do(req)
+	if err != nil {
+		return
+	}
+	if Debug {
+		dump, _ := httputil.DumpResponse(resp, true)
+		log.Printf("%s", dump)
+	}
+	// check response
+	if resp.StatusCode != 200 {
+		log.Printf("status code (%d) is NOT OK\n", resp.StatusCode)
+		body, readErr := ioutil.ReadAll(resp.Body)
+		if readErr != nil {
+			return readErr
+		}
+		log.Printf("Server error: '%s'\n", body)
+		err = fmt.Errorf("Server error: '%s'\n", body)
+		return
+	}
+	// return
+	return
+}
+
+func (c *Client) GetConfigOnServer() (err error) {
+	urlString := c.URL + "config/" + c.Username
+	req, err := http.NewRequest("GET", urlString, nil)
+	if err != nil {
+		return
+	}
+	if Debug {
+		dump, _ := httputil.DumpRequestOut(req, false)
+		log.Printf("%s", dump)
+	}
+	// send request
+	resp, err := c.Do(req)
+	if err != nil {
+		return
+	}
+	if Debug {
+		dump, _ := httputil.DumpResponse(resp, true)
+		log.Printf("%s", dump)
+	}
+	// check response
+	if resp.StatusCode != 200 {
+		log.Printf("status code (%d) is NOT OK\n", resp.StatusCode)
+		body, readErr := ioutil.ReadAll(resp.Body)
+		if readErr != nil {
+			return readErr
+		}
+		log.Printf("Server error: '%s'\n", body)
+		err = fmt.Errorf("Server error: '%s'\n", body)
+		return
+	}
+	// read body
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+	/* // decrypt body
+	senderID, _, rr, err := minilock.DecryptFileContents(body, c.Keys)
+	if err != nil {
+		return
+	}
+	if senderID != c.Username {
+		err = fmt.Errorf("config senderID not correct: '%s' vs. '%s'\n", senderID, c.Username)
+		return
+	}
+	// unmarshal
+	err = json.Unmarshal(rr, c)
+	if err != nil {
+		return
+	}
+	*/
+	// unmarshal
+	err = json.Unmarshal(body, c)
+	if err != nil {
+		return
 	}
 	return
 }

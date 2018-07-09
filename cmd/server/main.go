@@ -118,8 +118,8 @@ func main() {
 	})
 	// initialize http router
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/{UserID}/{FileID}", Download)
 	router.HandleFunc("/config/{UserID}", ConfigHandler).Name("ConfigHandler")
+	router.HandleFunc("/{UserID}/{FileID}", Download)
 	router.HandleFunc("/upload/", Upload)
 	router.HandleFunc("/list/", List)
 	router.HandleFunc("/register/", Register)
