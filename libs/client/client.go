@@ -47,6 +47,7 @@ type Client struct {
 	URL          string       // URL of the API
 	Socksproxy   string       // socks5 proxy to connect to server
 	httpClient   *http.Client // http.Client to talk to the API
+	AddressBook  addressbook.Addressbook
 }
 
 func (c *Client) Do(r *http.Request) (resp *http.Response, err error) {
@@ -604,7 +605,14 @@ func (c *Client) DownloadFile(fileID string) (filename string, fileContent []byt
 }
 
 func (c *Client) SaveAddressbook(a *addressbook.Addressbook) (err error) {
-	// save addressbook
+	// save addressbook remote
+	c.AddressBook = *a
+	err = c.SaveConfigOnServer()
+	if err != nil {
+		return
+	}
+	log.Printf("Addressbook save on server\n.")
+	// save addressbook local
 	// get user home dir
 	usr, err := user.Current()
 	if err != nil {
@@ -624,5 +632,27 @@ func (c *Client) SaveAddressbook(a *addressbook.Addressbook) (err error) {
 	if err != nil {
 		return
 	}
+	return
+}
+
+func (c *Client) LoadAddressbook() (a *addressbook.Addressbook, err error) {
+	ab := c.AddressBook
+	return &ab, nil
+}
+
+func (c *Client) LoadAddressbookFromFile(filename string) (a *addressbook.Addressbook, err error) {
+	//var a *addressbook.Addressbook
+	usr, err := user.Current()
+	addressbookPath := filepath.Join(usr.HomeDir, ".config", "secureshare", "client", c.Username)
+	addressbookPath = filepath.Join(addressbookPath, "addressbook.yml")
+	adata, err := ioutil.ReadFile(addressbookPath)
+	if err != nil {
+		return
+	}
+	err = yaml.Unmarshal(adata, &a)
+	if err != nil {
+		return
+	}
+	c.AddressBook = *a
 	return
 }

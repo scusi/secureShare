@@ -167,6 +167,8 @@ func main() {
 			log.Printf("WARNING: %s\n", err.Error())
 		}
 
+		err = c.SaveAddressbook(&c.AddressBook)
+		checkFatal(err)
 		return
 	}
 
@@ -299,13 +301,40 @@ func main() {
 
 	// load addressbook
 	var a *addressbook.Addressbook
+	/* old variant:
 	addressbookPath := filepath.Join(usr.HomeDir, ".config", "secureshare", "client", c.Username)
 	addressbookPath = filepath.Join(addressbookPath, "addressbook.yml")
 	adata, err := ioutil.ReadFile(addressbookPath)
 	checkFatal(err)
 	err = yaml.Unmarshal(adata, &a)
 	checkFatal(err)
+	*/
+	addressbookPath := filepath.Join(usr.HomeDir, ".config", "secureshare", "client", c.Username)
+	addressbookPath = filepath.Join(addressbookPath, "addressbook.yml")
+	a, err = c.LoadAddressbookFromFile(addressbookPath)
+	checkFatal(err)
+	/*
+		listData := a.List()
+		fmt.Println("")
+		fmt.Printf("SecureShare Username                        \tAlias\n")
+		fmt.Printf("=======================================================================\n")
+		fmt.Printf("%s", string(listData))
+		fmt.Printf("=======================================================================\n")
+		fmt.Println("")
+	*/
 
+	// new variant:
+	a, err = c.LoadAddressbook()
+	checkFatal(err)
+	/*
+		listData = a.List()
+		fmt.Println("")
+		fmt.Printf("SecureShare Username                        \tAlias\n")
+		fmt.Printf("=======================================================================\n")
+		fmt.Printf("%s", string(listData))
+		fmt.Printf("=======================================================================\n")
+		fmt.Println("")
+	*/
 	// list contacts from addressbook
 	if contacts {
 		listData := a.List()
