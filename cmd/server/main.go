@@ -126,6 +126,7 @@ func main() {
 	router.HandleFunc("/register/", Register)
 	router.HandleFunc("/lookupKey", LookupKey)
 	router.HandleFunc("/usernameFromPubID", UsernameFromPubID)
+	router.HandleFunc("/ping", Pong)
 	router.HandleFunc("/", Index)
 	// start server
 	if cfg.CertFile != "" && cfg.KeyFile != "" {
@@ -135,6 +136,11 @@ func main() {
 		log.Printf("listenAddr: %s\n", cfg.ListenAddr)
 		log.Fatal(http.ListenAndServe(cfg.ListenAddr, router))
 	}
+}
+
+func Pong(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "pong")
+	return
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
