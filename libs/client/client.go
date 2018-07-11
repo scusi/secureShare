@@ -23,6 +23,7 @@ import (
 	"net/http/httputil"
 	"net/textproto"
 	"net/url"
+	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
@@ -102,6 +103,11 @@ func SetUsername(username string) OptionFunc {
 func SetKeys(keys *taber.Keys) OptionFunc {
 	return func(client *Client) error {
 		client.Keys = keys
+		pubID, err := keys.EncodeID()
+		if err != nil {
+			return err
+		}
+		client.PublicKey = pubID
 		return nil
 	}
 }
@@ -115,6 +121,11 @@ func SetAPIToken(token string) OptionFunc {
 		client.APIToken = token
 		return nil
 	}
+}
+
+// sets the http.Client to be used for requests to secureShareServer
+func (c *Client) SetHttpClient(hc *http.Client) {
+	c.httpClient = hc
 }
 
 func New(options ...OptionFunc) (c *Client, err error) {
@@ -151,6 +162,103 @@ func New(options ...OptionFunc) (c *Client, err error) {
 	return c, nil
 }
 
+func (c *Client) SaveLocal(filename string) (err error) {
+	cy, err := yaml.Marshal(c)
+	/* // make sure that the path exists
+	clientConfigFile = filepath.Join(
+		usr.HomeDir, ".config",
+		"secureshare", "client", c.Username, "config.yml")
+	*/
+	clientConfigPath := filepath.Dir(filename)
+	err = os.MkdirAll(clientConfigPath, 0700)
+	if err != nil {
+		return
+	}
+	// write actual config file to disk
+	err = ioutil.WriteFile(filename, cy, 0700)
+	if err != nil {
+		return
+	}
+	log.Printf("your configuration has been saved under: '%s'\n", filename)
+	return
+}
+func RestoreLocal(filename string) (c *Client, err error) {
+	// load client from config
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return
+	}
+	err = yaml.Unmarshal(data, c)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func (c *Client) SaveRemote() (err error) {
+	err = c.SaveConfigOnServer()
+	return
+}
+
+func RestoreRemote(keys *taber.Keys, serverURL string) (c *Client, err error) {
+	if serverURL == "" {
+		serverURL = defaultURL
+	}
+	hc := new(http.Client)
+	// get userID from publicKey
+	pubID, err := keys.EncodeID()
+	if err != nil {
+		return
+	}
+	getUsernameURL := serverURL + "usernameFromPubID"
+	v := url.Values{}
+	v.Add("pubID", pubID)
+	req, err := http.NewRequest("GET", getUsernameURL+"?"+v.Encode(), nil)
+	if err != nil {
+		return
+	}
+	resp, err := hc.Do(req)
+	if err != nil {
+		return
+	}
+	username, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+	log.Printf("username: '%s'\n", username)
+
+	restoreURL := serverURL + "config/" + string(username)
+	req, err = http.NewRequest("GET", restoreURL, nil)
+	if err != nil {
+		return
+	}
+	resp, err = hc.Do(req)
+	if err != nil {
+		return
+	}
+	configBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+	senderID, _, rr, err := minilock.DecryptFileContents(configBytes, keys)
+	if err != nil {
+		return
+	}
+	if senderID != pubID {
+		err = fmt.Errorf("senderID ('%s') does not match pubID ('%s')\n", senderID, pubID)
+		return
+	}
+	// unmarshal
+	var cl = new(Client)
+	err = json.Unmarshal(rr, &cl)
+	if err != nil {
+		return
+	}
+	cl.SetHttpClient(new(http.Client))
+	c = cl
+	return
+}
+
 // ID - returns the clientID / secureShareUsername
 func (c *Client) ID() (id string) {
 	dk, err := scrypt.Key([]byte(c.PublicKey), c.Salt, 1<<15, 8, 1, 32)
@@ -158,11 +266,6 @@ func (c *Client) ID() (id string) {
 		log.Fatal(err)
 	}
 	return base64.URLEncoding.EncodeToString(dk)
-}
-
-// sets the http.Client to be used for requests to secureShareServer
-func (c *Client) SetHttpClient(hc *http.Client) {
-	c.httpClient = hc
 }
 
 // UpdateKey - asks the secureShareServer for the actual key of a given user
@@ -204,8 +307,12 @@ func (c *Client) SaveConfigOnServer() (err error) {
 	}
 	// encrypt clientBytes
 	// TODO: minilock.EncryptFileContents()
+	minilockBytes, err := minilock.EncryptFileContents("config", clientBytes, c.Keys, c.Keys)
+	if err != nil {
+		return
+	}
 	// create save request
-	bodyReader := bytes.NewReader(clientBytes)
+	bodyReader := bytes.NewReader(minilockBytes)
 	urlString := c.URL + "config/" + c.Username
 	req, err := http.NewRequest("POST", urlString, bodyReader)
 	if err != nil {
@@ -274,23 +381,17 @@ func (c *Client) GetConfigOnServer() (err error) {
 	if err != nil {
 		return
 	}
-	/* // decrypt body
+	// decrypt body
 	senderID, _, rr, err := minilock.DecryptFileContents(body, c.Keys)
 	if err != nil {
 		return
 	}
-	if senderID != c.Username {
-		err = fmt.Errorf("config senderID not correct: '%s' vs. '%s'\n", senderID, c.Username)
+	if senderID != c.PublicKey {
+		err = fmt.Errorf("config senderID not correct: '%s' vs. '%s'\n", senderID, c.PublicKey)
 		return
 	}
 	// unmarshal
 	err = json.Unmarshal(rr, c)
-	if err != nil {
-		return
-	}
-	*/
-	// unmarshal
-	err = json.Unmarshal(body, c)
 	if err != nil {
 		return
 	}

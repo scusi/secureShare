@@ -14,6 +14,7 @@ import (
 	"github.com/scusi/secureShare/libs/client/addressBook"
 	"github.com/scusi/secureShare/libs/client/askpass"
 	//"github.com/scusi/secureShare/libs/message"
+	"encoding/json"
 	"golang.org/x/crypto/scrypt"
 	"gopkg.in/yaml.v2"
 	"h12.me/socks"
@@ -51,8 +52,10 @@ var showUsername bool
 var toraddr string
 var outFile string // file to write output, overrides original filename
 var restore string // userid to restore
+var purge bool     // if true delete local files
 
 func init() {
+	flag.BoolVar(&purge, "purge", false, "if set true will delete all local files like config, addressbook,...")
 	flag.StringVar(&toraddr, "socksproxy", "", "set a socks proxy (e.g. tor) to be used to connect to the server")
 	flag.BoolVar(&Debug, "debug", false, "enables debug output when 'true'")
 	flag.BoolVar(&skipVerify, "InsecureSkipVerify", false, "turn off TLS certificate checks (DO NOT USE unless you know what you do)")
@@ -95,6 +98,15 @@ func main() {
 		client.Debug = true
 	}
 
+	if purge {
+		clientConfigDir := filepath.Join(
+			usr.HomeDir, ".config",
+			"secureshare")
+		err = os.RemoveAll(clientConfigDir)
+		checkFatal(err)
+		return
+	}
+
 	if registerNewMachine {
 		// ask minilock credentials
 		// generate minilock keys
@@ -117,15 +129,44 @@ func main() {
 		email, password := askpass.Credentials()
 		keys, err := minilock.GenerateKey(email, password)
 		checkFatal(err)
-		//pubID, err := keys.EncodeID()
-		//checkFatal(err)
-		c, err := client.New(
-			client.SetUsername(restore),
-			client.SetURL(URL),
-			client.SetKeys(keys))
-		err = c.GetConfigOnServer()
+		/*
+			//pubID, err := keys.EncodeID()
+			//checkFatal(err)
+			c, err := client.New(
+				client.SetUsername(restore),
+				client.SetURL(URL),
+				client.SetKeys(keys))
+			err = c.GetConfigOnServer()
+			checkFatal(err)
+			// set a fresh httpClient
+			c.SetHttpClient(new(http.Client))
+		*/
+		c, err := client.RestoreRemote(keys, URL)
 		checkFatal(err)
-		log.Printf("Client: %+v\n", c)
+		clientBytes, err := json.MarshalIndent(c, "", "  ")
+		log.Printf("restored Client (marshaled):\n%s\n", string(clientBytes))
+		log.Printf("restored Client (raw):\n%#v\n", c)
+		// test if we can make requests with the restored client
+		fileList, err := c.List()
+		checkFatal(err)
+		fmt.Printf("fileID  size\t time\n")
+		fmt.Printf("%s", fileList)
+		// save restored client local
+		// make sure that the path exists
+		clientConfigFile = filepath.Join(
+			usr.HomeDir, ".config",
+			"secureshare", "client", c.Username, "config.yml")
+		err = c.SaveLocal(clientConfigFile)
+		checkFatal(err)
+		err = os.Remove(defClientConfigFile)
+		if err != nil {
+			log.Printf("WARNING: %s\n", err.Error())
+		}
+		err = os.Symlink(clientConfigFile, defClientConfigFile)
+		if err != nil {
+			log.Printf("WARNING: %s\n", err.Error())
+		}
+
 		return
 	}
 
@@ -187,7 +228,6 @@ func main() {
 
 		c.PublicKey = pubID
 		c.Socksproxy = toraddr
-		cy, err := yaml.Marshal(c)
 		checkFatal(err)
 		// save the config on the server
 		err = c.SaveConfigOnServer()
@@ -196,16 +236,10 @@ func main() {
 		clientConfigFile = filepath.Join(
 			usr.HomeDir, ".config",
 			"secureshare", "client", username, "config.yml")
-		clientConfigPath := filepath.Dir(clientConfigFile)
-		err = os.MkdirAll(clientConfigPath, 0700)
+		err = c.SaveLocal(clientConfigFile)
 		checkFatal(err)
-		// write actual config file to disk
-		err = ioutil.WriteFile(clientConfigFile, cy, 0700)
-		checkFatal(err)
-		log.Printf("your configuration has been saved under: '%s'\n", clientConfigFile)
 		// copy config.yml to default config file location
 		err = os.Symlink(clientConfigFile, defClientConfigFile)
-		//checkFatal(err)
 		if err != nil {
 			log.Printf("WARNING: %s\n", err.Error())
 		}

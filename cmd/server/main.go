@@ -124,6 +124,7 @@ func main() {
 	router.HandleFunc("/list/", List)
 	router.HandleFunc("/register/", Register)
 	router.HandleFunc("/lookupKey", LookupKey)
+	router.HandleFunc("/usernameFromPubID", UsernameFromPubID)
 	router.HandleFunc("/", Index)
 	// start server
 	if cfg.CertFile != "" && cfg.KeyFile != "" {
@@ -230,6 +231,17 @@ func LookupKey(w http.ResponseWriter, r *http.Request) {
 	}
 	publicKey := userDB.PublicKey(username)
 	fmt.Fprintf(w, "%s", publicKey)
+}
+
+func UsernameFromPubID(w http.ResponseWriter, r *http.Request) {
+	pubID := r.FormValue("pubID")
+	username := userDB.LookupNameByPubkey(pubID)
+	if username != "" {
+		fmt.Fprintf(w, username)
+		return
+	}
+	http.Error(w, "not found", 404)
+	return
 }
 
 func List(w http.ResponseWriter, r *http.Request) {
