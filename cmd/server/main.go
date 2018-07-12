@@ -11,6 +11,7 @@ import (
 	"github.com/decred/base58"
 	"github.com/gorilla/mux"
 	"github.com/peterbourgon/diskv"
+	"github.com/scusi/bytesize"
 	"github.com/scusi/secureShare/libs/message"
 	"github.com/scusi/secureShare/libs/server/common"
 	"github.com/scusi/secureShare/libs/server/config"
@@ -57,7 +58,6 @@ func AdvancedTransformExample(key string) *diskv.PathKey {
 
 // If you provide an AdvancedTransform, you must also provide its
 // inverse:
-
 func InverseTransformExample(pathKey *diskv.PathKey) (key string) {
 	//log.Printf("revTransform: pathKey: %+v\n", pathKey)
 	key = strings.Join(pathKey.Path, "/") + "/" + pathKey.FileName
@@ -294,7 +294,8 @@ func getFileInfo(filename string) (fileInfo string, err error) {
 	}
 	// TODO: make size human readable with bytesize
 	// TODO: format time as a shorter string
-	return fmt.Sprintf("%d, %s", size, modTime), nil
+	//return fmt.Sprintf("%d, %s", size, modTime), nil
+	return fmt.Sprintf("%s, %s", bytesize.ByteSize(int64(size)), modTime.Format("02.01.2006 15:04:05 MST")), nil
 }
 
 func Upload(w http.ResponseWriter, r *http.Request) {
@@ -429,17 +430,6 @@ func Download(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//package main
-/*
-import (
-	"github.com/gorilla/mux"
-	"io/ioutil"
-	"log"
-	"net/http"
-	"path/filepath"
-	//"strings"
-)
-*/
 func ConfigHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("entering ConfigHandler...\n")
 	/* We can not authenticate because we have no ApiKey on the client yet.
