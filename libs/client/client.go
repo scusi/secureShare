@@ -163,6 +163,22 @@ func New(options ...OptionFunc) (c *Client, err error) {
 	return c, nil
 }
 
+func (c *Client) Ping() (err error) {
+	resp, err := c.httpClient.Get(c.URL + "ping")
+	if err != nil {
+		return
+	}
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+	if string(bodyBytes) != "pong" {
+		err = fmt.Errorf("ping: did not get the expected pong.\n")
+		return
+	}
+	return
+}
+
 func (c *Client) SaveLocal(filename string) (err error) {
 	cy, err := yaml.Marshal(c)
 	/* // make sure that the path exists
@@ -183,6 +199,7 @@ func (c *Client) SaveLocal(filename string) (err error) {
 	log.Printf("your configuration has been saved under: '%s'\n", filename)
 	return
 }
+
 func RestoreLocal(filename string) (c *Client, err error) {
 	// load client from config
 	data, err := ioutil.ReadFile(filename)
