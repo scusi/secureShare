@@ -99,11 +99,18 @@ func main() {
 	}
 
 	if purge {
-		clientConfigDir := filepath.Join(
-			usr.HomeDir, ".config",
-			"secureshare")
-		err = os.RemoveAll(clientConfigDir)
-		checkFatal(err)
+		ok = "N"
+		fmt.Printf("Do you really want to delete your secureShare config directory?\n")
+		fmt.Printf("Answer 'Yes' or 'No' in CAPITAL LETTERS): ")
+		fmt.Scanf("%s", ok)
+		if ok == "YES" {
+			clientConfigDir := filepath.Join(
+				usr.HomeDir, ".config",
+				"secureshare")
+			err = os.RemoveAll(clientConfigDir)
+			checkFatal(err)
+			return
+		}
 		return
 	}
 
