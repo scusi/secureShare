@@ -21,6 +21,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httputil"
+	"net/rpc"
 	"net/textproto"
 	"net/url"
 	"os"
@@ -47,6 +48,7 @@ type Client struct {
 	URL          string       // URL of the API
 	Socksproxy   string       // socks5 proxy to connect to server
 	httpClient   *http.Client // http.Client to talk to the API
+	rpcClient    *rpc.Client  // rpcClient to talk to the local key agent
 	AddressBook  addressbook.Addressbook
 }
 
@@ -129,6 +131,10 @@ func (c *Client) SetHttpClient(hc *http.Client) {
 	c.httpClient = hc
 }
 
+func (c *Client) SetRpcClient(rpcClient *rpc.Client) {
+	c.rpcClient = rpcClient
+}
+
 func New(options ...OptionFunc) (c *Client, err error) {
 	c = new(Client)
 	if uuid.SetNodeID(uuid.NodeID()) != true {
@@ -142,6 +148,15 @@ func New(options ...OptionFunc) (c *Client, err error) {
 	}
 	c.MachineID = hex.EncodeToString(u.NodeID())
 	c.URL = defaultURL
+
+	// set default RPC client
+	c.rpcClient, err = rpc.DialHTTP("unix", "/tmp/minilockAgent.sock")
+	if err != nil {
+		log.Println("WARNING: no local minilockAgent found. Error: ", err)
+		return
+	}
+
+	// range options and set things accordingly
 	for _, option := range options {
 		if err := option(c); err != nil {
 			return nil, err
