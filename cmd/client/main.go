@@ -99,7 +99,7 @@ func main() {
 	}
 
 	if purge {
-		ok = "N"
+		ok := "NO"
 		fmt.Printf("Do you really want to delete your secureShare config directory?\n")
 		fmt.Printf("Answer 'Yes' or 'No' in CAPITAL LETTERS): ")
 		fmt.Scanf("%s", ok)
